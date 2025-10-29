@@ -1,19 +1,105 @@
 'use client';
 
+import React from 'react';
 import { useMusic } from '../contexts/MusicContext';
 import styles from './Player.module.css';
 
 export default function Player() {
-  const { currentTrack, isPlaying, togglePlayPause } = useMusic();
+  const {
+    currentTrack,
+    isPlaying,
+    togglePlayPause,
+    volume,
+    handleVolumeChange,
+    currentTime,
+    duration,
+    playNext,
+    playPrevious,
+    setCurrentTime,
+  } = useMusic();
+
+  const formatTime = (seconds: number): string => {
+    if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
+      return '0:00';
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!duration || duration === 0 || isNaN(duration)) {
+      console.log(
+        'Нет корректной длительности трека, не можем перематывать. Duration:',
+        duration,
+      );
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const newTime = Math.max(
+      0,
+      Math.min(duration, (clickX / width) * duration),
+    );
+
+    // Обновляем время через audio элемент
+    const audio = document.querySelector('audio');
+    if (audio) {
+      audio.currentTime = newTime;
+      // Принудительно обновляем состояние
+      setCurrentTime(newTime);
+    }
+  };
 
   return (
     <div className={styles.bar}>
       <div className={styles.bar__content}>
-        <div className={styles.bar__playerProgress}></div>
+        <div
+          className={styles.bar__playerProgress}
+          onClick={handleProgressClick}
+          title={`${formatTime(currentTime)} / ${formatTime(duration)}`}
+        >
+          <div
+            className={styles.bar__playerProgressActive}
+            style={{
+              width:
+                duration && duration > 0
+                  ? `${(currentTime / duration) * 100}%`
+                  : '0%',
+            }}
+          ></div>
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(255,255,255,0.1)',
+              pointerEvents: 'none',
+            }}
+          >
+            <span
+              style={{
+                color: 'white',
+                fontSize: '10px',
+                position: 'absolute',
+                top: '-15px',
+                left: '10px',
+              }}
+            >
+              {duration
+                ? `${Math.round((currentTime / duration) * 100)}%`
+                : '0%'}
+            </span>
+          </div>
+        </div>
         <div className={styles.bar__playerBlock}>
           <div className={styles.bar__player}>
             <div className={styles.player__controls}>
-              <div className={styles.player__btnPrev}>
+              <div className={styles.player__btnPrev} onClick={playPrevious}>
                 <svg className={styles.player__btnPrevSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-prev"></use>
                 </svg>
@@ -29,7 +115,7 @@ export default function Player() {
                   ></use>
                 </svg>
               </div>
-              <div className={styles.player__btnNext}>
+              <div className={styles.player__btnNext} onClick={playNext}>
                 <svg className={styles.player__btnNextSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-next"></use>
                 </svg>
@@ -91,10 +177,20 @@ export default function Player() {
                   className={styles.volume__progressLine}
                   type="range"
                   name="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => handleVolumeChange(Number(e.target.value))}
                 />
               </div>
             </div>
           </div>
+        </div>
+        <div className={styles.bar__timeInfo}>
+          <span className={styles.bar__timeCurrent}>
+            {formatTime(currentTime)}
+          </span>
+          <span className={styles.bar__timeTotal}>{formatTime(duration)}</span>
         </div>
       </div>
     </div>

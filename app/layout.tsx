@@ -3,6 +3,7 @@ import { Montserrat } from 'next/font/google';
 import './globals.css';
 import { MusicProvider } from '../src/contexts/MusicContext';
 import AudioPlayer from '../src/components/AudioPlayer';
+import TimeUpdater from '../src/components/TimeUpdater';
 
 const montserrat = Montserrat({ subsets: ['latin', 'cyrillic'] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
         <MusicProvider>
           {children}
           <AudioPlayer />
+          <TimeUpdater />
         </MusicProvider>
       </body>
     </html>

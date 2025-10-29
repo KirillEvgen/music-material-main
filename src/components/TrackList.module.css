@@ -83,6 +83,18 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+.playlist__itemActive {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.playlist__itemActive .track__titleSvg {
+  stroke: #b672ff;
+}
+
+.playlist__itemActive .track__titleLink {
+  color: #b672ff;
+}
+
 .playlist__track {
   display: -webkit-box;
   display: -ms-flexbox;
