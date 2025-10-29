@@ -26,9 +26,21 @@
   -webkit-box-pack: justify;
   -ms-flex-pack: justify;
   justify-content: space-between;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.nav__burger:hover {
+  opacity: 0.7;
 }
 
 .nav__menu {
+  display: none;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.nav__menu_open {
   display: block;
   visibility: visible;
 }

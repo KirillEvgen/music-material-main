@@ -10,6 +10,7 @@
   -ms-flex-align: center;
   align-items: center;
   margin-bottom: 51px;
+  position: relative;
 }
 
 .filter__title {
@@ -42,7 +43,54 @@
 }
 
 .filter__button:active,
-.filter__button-active {
+.filter__button_active {
   border-color: #ad61ff;
+  color: #ad61ff;
+}
+
+.filter__wrapper {
+  position: relative;
+  margin-right: 10px;
+}
+
+.filter__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #313131;
+  border-radius: 12px;
+  padding: 34px;
+  margin-top: 10px;
+  z-index: 10;
+  color: white;
+  display: flex;
+  gap: 28px;
+  height: max-content;
+  max-height: 237px;
+  overflow-y: auto;
+  flex-direction: column;
+  width: max-content;
+  max-width: 248px;
+}
+
+.filter__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter__list::-webkit-scrollbar-track {
+  background-color: rgba(75, 73, 73, 1);
+}
+
+.filter__list::-webkit-scrollbar-thumb {
+  background-color: white;
+}
+
+.filter__item {
+  cursor: pointer;
+  padding: 5px 0;
+  transition: color 0.3s ease;
+}
+
+.filter__item:hover {
   color: #ad61ff;
 }
