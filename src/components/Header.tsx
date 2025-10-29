@@ -1,10 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './Header.module.css';
 
-export default function Header() {
+interface HeaderProps {
+  isMenuOpen: boolean;
+  onMenuToggle: () => void;
+}
+
+export default function Header({ isMenuOpen, onMenuToggle }: HeaderProps) {
   return (
     <nav className={styles.main__nav}>
       <div className={styles.nav__logo}>
@@ -16,12 +22,14 @@ export default function Header() {
           alt="logo"
         />
       </div>
-      <div className={styles.nav__burger}>
+      <div className={styles.nav__burger} onClick={onMenuToggle}>
         <span className={styles.burger__line}></span>
         <span className={styles.burger__line}></span>
         <span className={styles.burger__line}></span>
       </div>
-      <div className={styles.nav__menu}>
+      <div
+        className={`${styles.nav__menu} ${isMenuOpen ? styles.nav__menu_open : ''}`}
+      >
         <ul className={styles.menu__list}>
           <li className={styles.menu__item}>
             <Link href="/" className={styles.menu__link}>
