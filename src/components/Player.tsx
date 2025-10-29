@@ -1,22 +1,23 @@
 'use client';
 
 import React from 'react';
-import { useMusic } from '../contexts/MusicContext';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { 
+  togglePlayPause, 
+  handleVolumeChange, 
+  playNext, 
+  playPrevious, 
+  setCurrentTime 
+} from '../store/musicSlice';
 import styles from './Player.module.css';
 
 export default function Player() {
-  const {
-    currentTrack,
-    isPlaying,
-    togglePlayPause,
-    volume,
-    handleVolumeChange,
-    currentTime,
-    duration,
-    playNext,
-    playPrevious,
-    setCurrentTime,
-  } = useMusic();
+  const dispatch = useAppDispatch();
+  const currentTrack = useAppSelector((state) => state.music.currentTrack);
+  const isPlaying = useAppSelector((state) => state.music.isPlaying);
+  const volume = useAppSelector((state) => state.music.volume);
+  const currentTime = useAppSelector((state) => state.music.currentTime);
+  const duration = useAppSelector((state) => state.music.duration);
 
   const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
@@ -49,7 +50,7 @@ export default function Player() {
     if (audio) {
       audio.currentTime = newTime;
       // Принудительно обновляем состояние
-      setCurrentTime(newTime);
+      dispatch(setCurrentTime(newTime));
     }
   };
 
@@ -99,12 +100,12 @@ export default function Player() {
         <div className={styles.bar__playerBlock}>
           <div className={styles.bar__player}>
             <div className={styles.player__controls}>
-              <div className={styles.player__btnPrev} onClick={playPrevious}>
+              <div className={styles.player__btnPrev} onClick={() => alert('Еще не реализовано')}>
                 <svg className={styles.player__btnPrevSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-prev"></use>
                 </svg>
               </div>
-              <div className={styles.player__btnPlay} onClick={togglePlayPause}>
+              <div className={styles.player__btnPlay} onClick={() => dispatch(togglePlayPause())}>
                 <svg className={styles.player__btnPlaySvg}>
                   <use
                     xlinkHref={
@@ -115,7 +116,7 @@ export default function Player() {
                   ></use>
                 </svg>
               </div>
-              <div className={styles.player__btnNext} onClick={playNext}>
+              <div className={styles.player__btnNext} onClick={() => alert('Еще не реализовано')}>
                 <svg className={styles.player__btnNextSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-next"></use>
                 </svg>
@@ -125,7 +126,7 @@ export default function Player() {
                   <use xlinkHref="/img/icon/sprite.svg#icon-repeat"></use>
                 </svg>
               </div>
-              <div className={styles.player__btnShuffle}>
+              <div className={styles.player__btnShuffle} onClick={() => alert('Еще не реализовано')}>
                 <svg className={styles.player__btnShuffleSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-shuffle"></use>
                 </svg>
@@ -180,7 +181,7 @@ export default function Player() {
                   min="0"
                   max="100"
                   value={volume}
-                  onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                  onChange={(e) => dispatch(handleVolumeChange(Number(e.target.value)))}
                 />
               </div>
             </div>

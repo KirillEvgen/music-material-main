@@ -246,3 +246,30 @@
   text-align: right;
   color: #696969;
 }
+
+.track__currentIndicator {
+  width: 12px;
+  height: 12px;
+  background-color: #b672ff;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+
+.track__currentIndicatorPulsing {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

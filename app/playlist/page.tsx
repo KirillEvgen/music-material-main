@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { data } from '../../src/data';
 import { Track } from '../../src/types/Track';
-import { MusicProvider } from '../../src/contexts/MusicContext';
 import Header from '../../src/components/Header';
 import Search from '../../src/components/Search';
 import Filter from '../../src/components/Filter';
 import TrackList from '../../src/components/TrackList';
 import Sidebar from '../../src/components/Sidebar';
 import Player from '../../src/components/Player';
+import MusicInitializer from '../../src/components/MusicInitializer';
 import styles from './page.module.css';
 
 export default function Playlist() {
@@ -21,7 +21,8 @@ export default function Playlist() {
   };
 
   return (
-    <MusicProvider>
+    <>
+      <MusicInitializer tracks={tracks} />
       <div className={styles.wrapper}>
         <div className={styles.container}>
           <main className={styles.main}>
@@ -38,6 +39,6 @@ export default function Playlist() {
           <footer className={styles.footer}></footer>
         </div>
       </div>
-    </MusicProvider>
+    </>
   );
 }

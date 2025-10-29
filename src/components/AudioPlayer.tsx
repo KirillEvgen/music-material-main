@@ -1,18 +1,15 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useMusic } from '../contexts/MusicContext';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setCurrentTime, setDuration, setIsPlaying } from '../store/musicSlice';
 
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const {
-    currentTrack,
-    isPlaying,
-    volume,
-    setCurrentTime,
-    setDuration,
-    setIsPlaying,
-  } = useMusic();
+  const dispatch = useAppDispatch();
+  const currentTrack = useAppSelector((state) => state.music.currentTrack);
+  const isPlaying = useAppSelector((state) => state.music.isPlaying);
+  const volume = useAppSelector((state) => state.music.volume);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -31,13 +28,13 @@ export default function AudioPlayer() {
               intervalId = setInterval(() => {
                 if (audio && !audio.paused) {
                   const currentTime = audio.currentTime;
-                  setCurrentTime(currentTime);
+                  dispatch(setCurrentTime(currentTime));
                 }
               }, 100);
             })
             .catch((error) => {
               console.error('Ошибка воспроизведения:', error);
-              setIsPlaying(false);
+              dispatch(setIsPlaying(false));
             });
         } else {
           // Ждем события canplay
@@ -49,13 +46,13 @@ export default function AudioPlayer() {
                 intervalId = setInterval(() => {
                   if (audio && !audio.paused) {
                     const currentTime = audio.currentTime;
-                    setCurrentTime(currentTime);
+                    dispatch(setCurrentTime(currentTime));
                   }
                 }, 100);
               })
               .catch((error) => {
                 console.error('Ошибка воспроизведения:', error);
-                setIsPlaying(false);
+                dispatch(setIsPlaying(false));
               });
             audio.removeEventListener('canplay', handleCanPlayOnce);
           };
@@ -78,7 +75,7 @@ export default function AudioPlayer() {
         clearInterval(intervalId);
       }
     };
-  }, [isPlaying, setIsPlaying, setCurrentTime]);
+  }, [isPlaying, dispatch]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -119,9 +116,9 @@ export default function AudioPlayer() {
       });
 
     // Сбрасываем время при загрузке нового трека
-    setCurrentTime(0);
-    setDuration(0);
-  }, [currentTrack, setCurrentTime, setDuration]);
+    dispatch(setCurrentTime(0));
+    dispatch(setDuration(0));
+  }, [currentTrack, dispatch]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -129,18 +126,18 @@ export default function AudioPlayer() {
 
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration)) {
-        setDuration(audio.duration);
+        dispatch(setDuration(audio.duration));
       }
     };
 
     const handleEnded = () => {
-      setCurrentTime(0);
+      dispatch(setCurrentTime(0));
       // Можно добавить логику для следующего трека
     };
 
     const handleError = (e: Event) => {
       console.error('Ошибка загрузки аудио:', e);
-      setIsPlaying(false);
+      dispatch(setIsPlaying(false));
     };
 
     const handleCanPlay = () => {
@@ -170,7 +167,7 @@ export default function AudioPlayer() {
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('progress', handleProgress);
     };
-  }, [setCurrentTime, setDuration, setIsPlaying]);
+  }, [dispatch]);
 
   if (!currentTrack) return null;
 

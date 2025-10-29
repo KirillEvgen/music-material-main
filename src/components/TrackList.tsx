@@ -1,7 +1,8 @@
 'use client';
 
 import { Track } from '../types/Track';
-import { useMusic } from '../contexts/MusicContext';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { playTrack } from '../store/musicSlice';
 import styles from './TrackList.module.css';
 
 interface TrackListProps {
@@ -9,7 +10,9 @@ interface TrackListProps {
 }
 
 export default function TrackList({ tracks }: TrackListProps) {
-  const { playTrack, currentTrack, isPlaying } = useMusic();
+  const dispatch = useAppDispatch();
+  const currentTrack = useAppSelector((state) => state.music.currentTrack);
+  const isPlaying = useAppSelector((state) => state.music.isPlaying);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -18,7 +21,7 @@ export default function TrackList({ tracks }: TrackListProps) {
   };
 
   const handlePlay = (track: Track) => {
-    playTrack(track);
+    dispatch(playTrack(track));
   };
 
   return (
@@ -50,9 +53,13 @@ export default function TrackList({ tracks }: TrackListProps) {
               <div className={styles.playlist__track}>
                 <div className={styles.track__title}>
                   <div className={styles.track__titleImage}>
-                    <svg className={styles.track__titleSvg}>
-                      <use xlinkHref="/img/icon/sprite.svg#icon-note"></use>
-                    </svg>
+                    {isCurrentTrack ? (
+                      <div className={`${styles.track__currentIndicator} ${isPlaying ? styles.track__currentIndicatorPulsing : ''}`}></div>
+                    ) : (
+                      <svg className={styles.track__titleSvg}>
+                        <use xlinkHref="/img/icon/sprite.svg#icon-note"></use>
+                      </svg>
+                    )}
                   </div>
                   <div className={styles.track__titleText}>
                     <button

@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useMusic } from '../contexts/MusicContext';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setCurrentTime } from '../store/musicSlice';
 
 export default function TimeUpdater() {
-  const { isPlaying, setCurrentTime } = useMusic();
+  const dispatch = useAppDispatch();
+  const isPlaying = useAppSelector((state) => state.music.isPlaying);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -12,7 +14,7 @@ export default function TimeUpdater() {
       const audio = document.querySelector('audio');
       if (audio) {
         const currentTime = audio.currentTime;
-        setCurrentTime(currentTime);
+        dispatch(setCurrentTime(currentTime));
       }
     }, 100);
 
@@ -22,7 +24,7 @@ export default function TimeUpdater() {
         intervalRef.current = null;
       }
     };
-  }, [setCurrentTime]);
+  }, [dispatch]);
 
   return null;
 }

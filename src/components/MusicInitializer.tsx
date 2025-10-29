@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useMusic } from '../contexts/MusicContext';
+import { useAppDispatch } from '../store/hooks';
+import { setTracks } from '../store/musicSlice';
 import { Track } from '../types/Track';
 
 interface MusicInitializerProps {
@@ -9,11 +10,11 @@ interface MusicInitializerProps {
 }
 
 export default function MusicInitializer({ tracks }: MusicInitializerProps) {
-  const { setTracks } = useMusic();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    setTracks(tracks);
-  }, [tracks, setTracks]);
+    dispatch(setTracks(tracks));
+  }, [tracks, dispatch]);
 
   return null;
 }
