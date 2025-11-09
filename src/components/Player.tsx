@@ -7,7 +7,9 @@ import {
   handleVolumeChange, 
   playNext, 
   playPrevious, 
-  setCurrentTime 
+  setCurrentTime,
+  toggleShuffle,
+  toggleRepeat
 } from '../store/musicSlice';
 import styles from './Player.module.css';
 
@@ -18,6 +20,8 @@ export default function Player() {
   const volume = useAppSelector((state) => state.music.volume);
   const currentTime = useAppSelector((state) => state.music.currentTime);
   const duration = useAppSelector((state) => state.music.duration);
+  const isShuffleOn = useAppSelector((state) => state.music.isShuffleOn);
+  const isRepeatOn = useAppSelector((state) => state.music.isRepeatOn);
 
   const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
@@ -69,6 +73,7 @@ export default function Player() {
                 duration && duration > 0
                   ? `${(currentTime / duration) * 100}%`
                   : '0%',
+              pointerEvents: 'none',
             }}
           ></div>
           <div
@@ -100,12 +105,20 @@ export default function Player() {
         <div className={styles.bar__playerBlock}>
           <div className={styles.bar__player}>
             <div className={styles.player__controls}>
-              <div className={styles.player__btnPrev} onClick={() => alert('Еще не реализовано')}>
+              <div 
+                className={styles.player__btnPrev} 
+                onClick={() => dispatch(playPrevious())}
+                title="Предыдущий трек"
+              >
                 <svg className={styles.player__btnPrevSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-prev"></use>
                 </svg>
               </div>
-              <div className={styles.player__btnPlay} onClick={() => dispatch(togglePlayPause())}>
+              <div 
+                className={styles.player__btnPlay} 
+                onClick={() => dispatch(togglePlayPause())}
+                title={isPlaying ? "Пауза" : "Играть"}
+              >
                 <svg className={styles.player__btnPlaySvg}>
                   <use
                     xlinkHref={
@@ -116,17 +129,37 @@ export default function Player() {
                   ></use>
                 </svg>
               </div>
-              <div className={styles.player__btnNext} onClick={() => alert('Еще не реализовано')}>
+              <div 
+                className={styles.player__btnNext} 
+                onClick={() => dispatch(playNext())}
+                title="Следующий трек"
+              >
                 <svg className={styles.player__btnNextSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-next"></use>
                 </svg>
               </div>
-              <div className={styles.player__btnRepeat}>
+              <div 
+                className={styles.player__btnRepeat}
+                onClick={() => dispatch(toggleRepeat())}
+                title={isRepeatOn ? "Отключить повтор" : "Повторять трек"}
+                style={{ 
+                  opacity: isRepeatOn ? 1 : 0.5,
+                  cursor: 'pointer'
+                }}
+              >
                 <svg className={styles.player__btnRepeatSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-repeat"></use>
                 </svg>
               </div>
-              <div className={styles.player__btnShuffle} onClick={() => alert('Еще не реализовано')}>
+              <div 
+                className={styles.player__btnShuffle} 
+                onClick={() => dispatch(toggleShuffle())}
+                title={isShuffleOn ? "Отключить перемешивание" : "Перемешать"}
+                style={{ 
+                  opacity: isShuffleOn ? 1 : 0.5,
+                  cursor: 'pointer'
+                }}
+              >
                 <svg className={styles.player__btnShuffleSvg}>
                   <use xlinkHref="/img/icon/sprite.svg#icon-shuffle"></use>
                 </svg>
