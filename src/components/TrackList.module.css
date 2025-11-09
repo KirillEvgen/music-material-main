@@ -83,6 +83,18 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+.playlist__itemActive {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.playlist__itemActive .track__titleSvg {
+  stroke: #b672ff;
+}
+
+.playlist__itemActive .track__titleLink {
+  color: #b672ff;
+}
+
 .playlist__track {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -233,4 +245,31 @@
   line-height: 24px;
   text-align: right;
   color: #696969;
+}
+
+.track__currentIndicator {
+  width: 12px;
+  height: 12px;
+  background-color: #b672ff;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+
+.track__currentIndicatorPulsing {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

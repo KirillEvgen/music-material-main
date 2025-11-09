@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { Montserrat } from 'next/font/google';
 import './globals.css';
-import { MusicProvider } from '../src/contexts/MusicContext';
-import AudioPlayer from '../src/components/AudioPlayer';
+import Providers from '../src/components/Providers';
 
 const montserrat = Montserrat({ subsets: ['latin', 'cyrillic'] });
 
@@ -19,10 +18,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={montserrat.className}>
-        <MusicProvider>
-          {children}
-          <AudioPlayer />
-        </MusicProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
