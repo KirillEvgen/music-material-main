@@ -14,6 +14,9 @@ export default function TrackList({ tracks }: TrackListProps) {
   const currentTrack = useAppSelector((state) => state.music.currentTrack);
   const isPlaying = useAppSelector((state) => state.music.isPlaying);
 
+  // Убеждаемся, что tracks - это массив
+  const safeTracks = Array.isArray(tracks) ? tracks : [];
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -43,7 +46,7 @@ export default function TrackList({ tracks }: TrackListProps) {
         </div>
       </div>
       <div className={styles.content__playlist}>
-        {tracks.map((track) => {
+        {safeTracks.map((track) => {
           const isCurrentTrack = currentTrack?._id === track._id;
           return (
             <div

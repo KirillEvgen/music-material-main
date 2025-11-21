@@ -13,7 +13,9 @@ export default function MusicInitializer({ tracks }: MusicInitializerProps) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(setTracks(tracks));
+    // Убеждаемся, что tracks - это массив
+    const safeTracks = Array.isArray(tracks) ? tracks : [];
+    dispatch(setTracks(safeTracks));
   }, [tracks, dispatch]);
 
   return null;

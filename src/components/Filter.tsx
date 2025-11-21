@@ -12,18 +12,21 @@ interface FilterProps {
 export default function Filter({ tracks }: FilterProps) {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
+  // Убеждаемся, что tracks - это массив
+  const safeTracks = Array.isArray(tracks) ? tracks : [];
+
   // Получаем уникальные значения для фильтров
   const uniqueArtists = Array.from(
     new Set(
-      tracks.map((track) => track.author).filter((author) => author !== '-'),
+      safeTracks.map((track) => track.author).filter((author) => author !== '-'),
     ),
   );
   const uniqueGenres = Array.from(
-    new Set(tracks.flatMap((track) => track.genre)),
+    new Set(safeTracks.flatMap((track) => track.genre)),
   );
   const uniqueYears = Array.from(
     new Set(
-      tracks
+      safeTracks
         .map((track) => new Date(track.release_date).getFullYear())
         .sort((a, b) => b - a),
     ),

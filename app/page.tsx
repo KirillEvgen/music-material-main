@@ -1,44 +1,54 @@
 'use client';
 
-import { useState } from 'react';
-import { data } from '../src/data';
+import { useState, useEffect } from 'react';
 import { Track } from '../src/types/Track';
-import Header from '../src/components/Header';
-import Search from '../src/components/Search';
-import Filter from '../src/components/Filter';
-import TrackList from '../src/components/TrackList';
-import Sidebar from '../src/components/Sidebar';
-import Player from '../src/components/Player';
-import MusicInitializer from '../src/components/MusicInitializer';
-import styles from './page.module.css';
+import MainLayout from '../src/components/MainLayout';
+import { getTracks, ApiError } from '../src/api/api';
+import { useAppSelector } from '../src/store/hooks';
+import { data as fallbackData } from '../src/data';
 
 export default function Home() {
-  const [tracks, setTracks] = useState<Track[]>(data);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const token = useAppSelector((state) => state.auth.token);
 
-  const handleMenuToggle = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  useEffect(() => {
+    const fetchTracks = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const data = await getTracks(token);
+        console.log('Загружено треков:', data.length);
+        
+        // Если API вернул пустой массив, используем fallback данные
+        if (data.length === 0) {
+          console.log('API вернул пустой массив, используем fallback данные');
+          setTracks(fallbackData);
+        } else {
+          setTracks(data);
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки треков:', err);
+        // При ошибке используем fallback данные
+        console.log('Используем fallback данные из-за ошибки API');
+        setTracks(fallbackData);
+        setError(null); // Не показываем ошибку, так как используем fallback
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTracks();
+  }, [token]);
 
   return (
-    <>
-      <MusicInitializer tracks={tracks} />
-      <div className={styles.wrapper}>
-        <div className={styles.container}>
-          <main className={styles.main}>
-            <Header isMenuOpen={isMenuOpen} onMenuToggle={handleMenuToggle} />
-            <div className={styles.centerblock}>
-              <Search />
-              <h2 className={styles.centerblock__h2}>Треки</h2>
-              <Filter tracks={tracks} />
-              <TrackList tracks={tracks} />
-            </div>
-            <Sidebar />
-          </main>
-          <Player />
-          <footer className={styles.footer}></footer>
-        </div>
-      </div>
-    </>
+    <MainLayout
+      title="Треки"
+      tracks={tracks}
+      error={error}
+      isLoading={isLoading}
+    />
   );
 }
