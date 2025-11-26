@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Track } from '../types/Track';
 import classNames from 'classnames';
 import styles from './Filter.module.css';
@@ -13,41 +13,30 @@ export default function Filter({ tracks }: FilterProps) {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   // Убеждаемся, что tracks - это массив
-  const safeTracks = Array.isArray(tracks) ? tracks : [];
+  const safeTracks = useMemo(() => Array.isArray(tracks) ? tracks : [], [tracks]);
 
   // Получаем уникальные значения для фильтров
-  const uniqueArtists = Array.from(
+  const uniqueArtists = useMemo(() => Array.from(
     new Set(
       safeTracks.map((track) => track.author).filter((author) => author !== '-'),
     ),
-  );
-  const uniqueGenres = Array.from(
+  ), [safeTracks]);
+
+  const uniqueGenres = useMemo(() => Array.from(
     new Set(safeTracks.flatMap((track) => track.genre)),
-  );
-  const uniqueYears = Array.from(
+  ), [safeTracks]);
+
+  const uniqueYears = useMemo(() => Array.from(
     new Set(
       safeTracks
         .map((track) => new Date(track.release_date).getFullYear())
         .sort((a, b) => b - a),
     ),
-  );
+  ), [safeTracks]);
 
-  const handleFilterClick = (filterType: string) => {
-    setActiveFilter(activeFilter === filterType ? null : filterType);
-  };
-
-  const getFilterData = (filterType: string) => {
-    switch (filterType) {
-      case 'artist':
-        return uniqueArtists;
-      case 'genre':
-        return uniqueGenres;
-      case 'year':
-        return uniqueYears;
-      default:
-        return [];
-    }
-  };
+  const handleFilterClick = useCallback((filterType: string) => {
+    setActiveFilter((prev) => prev === filterType ? null : filterType);
+  }, []);
 
   return (
     <div className={styles.centerblock__filter}>

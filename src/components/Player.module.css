@@ -1,9 +1,10 @@
 .bar {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   background: rgba(28, 28, 28, 0.5);
+  z-index: 1000;
 }
 
 .bar__content {
@@ -255,10 +256,51 @@
   margin-left: 26%;
 }
 
-.trackPlay__like,
-.trackPlay__dislike {
+.trackPlay__likeButton {
+  background: none;
+  border: none;
   padding: 5px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  position: relative;
+}
+
+.trackPlay__likeButton:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+}
+
+.trackPlay__likeButton:active {
+  transform: scale(0.95);
+}
+
+.trackPlay__likeButtonActive .trackPlay__likeSvg {
+  fill: #b672ff;
+  stroke: #b672ff;
+}
+
+.trackPlay__likeButtonLoading {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.trackPlay__likeButtonActive {
+  animation: likePulse 0.3s ease;
+}
+
+@keyframes likePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .trackPlay__likeSvg {
@@ -266,17 +308,18 @@
   height: 12px;
   fill: transparent;
   stroke: #696969;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.trackPlay__likesCount {
+  font-size: 12px;
+  color: #b672ff;
+  margin-left: 4px;
+  font-weight: 500;
 }
 
 .trackPlay__dislike {
   margin-left: 28.5px;
-}
-
-.trackPlay__dislikeSvg {
-  width: 14.34px;
-  height: 13px;
-  fill: transparent;
-  stroke: #696969;
 }
 
 .volume__content {

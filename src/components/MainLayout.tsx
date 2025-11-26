@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useCallback, useMemo } from 'react';
 import Header from './Header';
 import Search from './Search';
 import Filter from './Filter';
@@ -17,6 +17,7 @@ interface MainLayoutProps {
   tracks: Track[];
   error?: string | null;
   isLoading?: boolean;
+  onTracksChange?: (tracks: Track[]) => void;
 }
 
 export default function MainLayout({
@@ -25,15 +26,25 @@ export default function MainLayout({
   tracks,
   error,
   isLoading,
+  onTracksChange,
 }: MainLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleMenuToggle = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const handleMenuToggle = useCallback(() => {
+    setIsMenuOpen((prev) => !prev);
+  }, []);
 
   // Убеждаемся, что tracks - это массив
-  const safeTracks = Array.isArray(tracks) ? tracks : [];
+  const safeTracks = useMemo(() => Array.isArray(tracks) ? tracks : [], [tracks]);
+
+  const handleTrackUpdate = useCallback((updatedTrack: Track) => {
+    if (!onTracksChange) return;
+    
+    const updatedTracks = safeTracks.map((track) =>
+      track._id === updatedTrack._id ? updatedTrack : track
+    );
+    onTracksChange(updatedTracks);
+  }, [safeTracks, onTracksChange]);
 
   return (
     <>
@@ -58,7 +69,7 @@ export default function MainLayout({
               ) : (
                 <>
                   <Filter tracks={safeTracks} />
-                  <TrackList tracks={safeTracks} />
+                  <TrackList tracks={safeTracks} onTrackUpdate={handleTrackUpdate} />
                 </>
               )}
               {children}

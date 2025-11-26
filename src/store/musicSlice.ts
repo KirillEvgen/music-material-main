@@ -11,6 +11,7 @@ interface MusicState {
   isShuffleOn: boolean;
   isRepeatOn: boolean;
   shuffledTracks: Track[];
+  favoriteTracks: Track[];
 }
 
 const initialState: MusicState = {
@@ -23,6 +24,7 @@ const initialState: MusicState = {
   isShuffleOn: false,
   isRepeatOn: false,
   shuffledTracks: [],
+  favoriteTracks: [],
 };
 
 const musicSlice = createSlice({
@@ -158,6 +160,45 @@ const musicSlice = createSlice({
     toggleRepeat: (state) => {
       state.isRepeatOn = !state.isRepeatOn;
     },
+    setFavoriteTracks: (state, action: PayloadAction<Track[]>) => {
+      state.favoriteTracks = action.payload;
+    },
+    addFavoriteTrack: (state, action: PayloadAction<Track>) => {
+      const track = action.payload;
+      if (!state.favoriteTracks.find((t) => t._id === track._id)) {
+        state.favoriteTracks.push(track);
+      }
+    },
+    removeFavoriteTrack: (state, action: PayloadAction<number>) => {
+      state.favoriteTracks = state.favoriteTracks.filter((t) => t._id !== action.payload);
+    },
+    updateTrack: (state, action: PayloadAction<Track>) => {
+      const updatedTrack = action.payload;
+      // Обновляем трек в списке tracks
+      const trackIndex = state.tracks.findIndex((t) => t._id === updatedTrack._id);
+      if (trackIndex !== -1) {
+        state.tracks[trackIndex] = updatedTrack;
+      }
+      // Обновляем текущий трек, если это он
+      if (state.currentTrack?._id === updatedTrack._id) {
+        state.currentTrack = updatedTrack;
+      }
+      // Обновляем в избранных треках
+      const favoriteIndex = state.favoriteTracks.findIndex((t) => t._id === updatedTrack._id);
+      if (favoriteIndex !== -1) {
+        // Если трек больше не в избранном, удаляем его
+        if (!updatedTrack.stared_user || updatedTrack.stared_user.length === 0) {
+          state.favoriteTracks.splice(favoriteIndex, 1);
+        } else {
+          state.favoriteTracks[favoriteIndex] = updatedTrack;
+        }
+      } else {
+        // Если трек добавлен в избранное, добавляем его
+        if (updatedTrack.stared_user && updatedTrack.stared_user.length > 0) {
+          state.favoriteTracks.push(updatedTrack);
+        }
+      }
+    },
   },
 });
 
@@ -176,6 +217,10 @@ export const {
   playPrevious,
   toggleShuffle,
   toggleRepeat,
+  setFavoriteTracks,
+  addFavoriteTrack,
+  removeFavoriteTrack,
+  updateTrack,
 } = musicSlice.actions;
 
 export default musicSlice.reducer;

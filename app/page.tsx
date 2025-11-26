@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Track } from '../src/types/Track';
 import MainLayout from '../src/components/MainLayout';
 import { getTracks, ApiError } from '../src/api/api';
@@ -43,12 +43,17 @@ export default function Home() {
     fetchTracks();
   }, [token]);
 
+  const handleTracksChange = useCallback((updatedTracks: Track[]) => {
+    setTracks(updatedTracks);
+  }, []);
+
   return (
     <MainLayout
       title="Треки"
       tracks={tracks}
       error={error}
       isLoading={isLoading}
+      onTracksChange={handleTracksChange}
     />
   );
 }

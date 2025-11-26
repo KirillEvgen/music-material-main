@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Track } from '../../src/types/Track';
 import MainLayout from '../../src/components/MainLayout';
@@ -56,12 +56,17 @@ function PlaylistContent() {
     fetchPlaylistTracks();
   }, [playlistId, token]);
 
+  const handleTracksChange = useCallback((updatedTracks: Track[]) => {
+    setTracks(updatedTracks);
+  }, []);
+
   return (
     <MainLayout
       title="Мой плейлист"
       tracks={tracks}
       error={error}
       isLoading={isLoading}
+      onTracksChange={handleTracksChange}
     />
   );
 }

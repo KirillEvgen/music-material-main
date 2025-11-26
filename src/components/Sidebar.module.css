@@ -83,3 +83,45 @@
   width: 100%;
   height: auto;
 }
+
+.sidebar__favorites {
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+}
+
+.sidebar__favoritesLink {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar__favoritesLink:hover {
+  background-color: rgba(182, 114, 255, 0.1);
+  color: #b672ff;
+}
+
+.sidebar__favoritesIcon {
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  fill: transparent;
+  stroke: #ffffff;
+  transition: stroke 0.2s ease, fill 0.2s ease;
+}
+
+.sidebar__favoritesLink:hover .sidebar__favoritesIcon {
+  stroke: #b672ff;
+  fill: #b672ff;
+}
+
+.sidebar__favoritesText {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+}
