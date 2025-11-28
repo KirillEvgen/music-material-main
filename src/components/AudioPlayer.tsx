@@ -138,6 +138,13 @@ export default function AudioPlayer() {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
+    // Проверяем, что у трека есть track_file
+    if (!currentTrack.track_file) {
+      console.error('Трек не имеет track_file:', currentTrack);
+      dispatch(setIsPlaying(false));
+      return;
+    }
+
     // Сбрасываем флаги при смене трека
     durationSetRef.current = false;
     trackEndHandledRef.current = false;

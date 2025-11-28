@@ -174,15 +174,35 @@ const musicSlice = createSlice({
     },
     updateTrack: (state, action: PayloadAction<Track>) => {
       const updatedTrack = action.payload;
-      // Обновляем трек в списке tracks
+      
+      // Обновляем трек в списке tracks, сохраняя все поля оригинального трека
       const trackIndex = state.tracks.findIndex((t) => t._id === updatedTrack._id);
       if (trackIndex !== -1) {
-        state.tracks[trackIndex] = updatedTrack;
+        // Сохраняем оригинальный трек и обновляем только измененные поля
+        const originalTrack = state.tracks[trackIndex];
+        state.tracks[trackIndex] = {
+          ...originalTrack,
+          ...updatedTrack,
+          // Убеждаемся, что важные поля не потеряны
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+        };
       }
-      // Обновляем текущий трек, если это он
+      
+      // Обновляем текущий трек, если это он, сохраняя все поля
       if (state.currentTrack?._id === updatedTrack._id) {
-        state.currentTrack = updatedTrack;
+        // Сохраняем оригинальный трек и обновляем только измененные поля
+        const originalTrack = state.currentTrack;
+        state.currentTrack = {
+          ...originalTrack,
+          ...updatedTrack,
+          // Убеждаемся, что важные поля не потеряны (особенно track_file для воспроизведения)
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+          name: updatedTrack.name || originalTrack.name,
+          author: updatedTrack.author || originalTrack.author,
+          album: updatedTrack.album || originalTrack.album,
+        };
       }
+      
       // Обновляем в избранных треках
       const favoriteIndex = state.favoriteTracks.findIndex((t) => t._id === updatedTrack._id);
       if (favoriteIndex !== -1) {
@@ -190,13 +210,30 @@ const musicSlice = createSlice({
         if (!updatedTrack.stared_user || updatedTrack.stared_user.length === 0) {
           state.favoriteTracks.splice(favoriteIndex, 1);
         } else {
-          state.favoriteTracks[favoriteIndex] = updatedTrack;
+          // Сохраняем оригинальный трек и обновляем только измененные поля
+          const originalTrack = state.favoriteTracks[favoriteIndex];
+          state.favoriteTracks[favoriteIndex] = {
+            ...originalTrack,
+            ...updatedTrack,
+            track_file: updatedTrack.track_file || originalTrack.track_file,
+          };
         }
       } else {
         // Если трек добавлен в избранное, добавляем его
         if (updatedTrack.stared_user && updatedTrack.stared_user.length > 0) {
           state.favoriteTracks.push(updatedTrack);
         }
+      }
+      
+      // Обновляем в перемешанном списке, если он есть
+      const shuffledIndex = state.shuffledTracks.findIndex((t) => t._id === updatedTrack._id);
+      if (shuffledIndex !== -1) {
+        const originalTrack = state.shuffledTracks[shuffledIndex];
+        state.shuffledTracks[shuffledIndex] = {
+          ...originalTrack,
+          ...updatedTrack,
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+        };
       }
     },
   },

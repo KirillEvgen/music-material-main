@@ -34,16 +34,54 @@ export default function SignUp() {
       // Используем email как username для API
       const username = email.split('@')[0] || email;
       const response = await signup({ email, password, username });
+      
+      // Логируем ответ для отладки
+      console.log('Ответ от API signup:', response);
+      
+      // Проверяем, что токен получен
+      const token = response.access || response.token || response.access_token;
+      
+      if (!token || (typeof token === 'string' && token.trim() === '')) {
+        console.error('Токен не получен при регистрации. Ответ:', JSON.stringify(response, null, 2));
+        setError('Ошибка: токен авторизации не был получен. Попробуйте войти после регистрации.');
+        return;
+      }
+      
+      console.log('Токен получен при регистрации, длина:', token.length);
+      
       dispatch(
         setCredentials({
           user: {
-            id: 0, // API не возвращает id, используем 0
-            username: response.username,
-            email: response.email,
+            id: (response as any).id || (response as any)._id || 0,
+            username: response.username || username,
+            email: response.email || email,
           },
-          token: response.access,
+          token: token,
         })
       );
+      
+      // Ждем, пока токен сохранится в localStorage
+      let attempts = 0;
+      const maxAttempts = 20; // 20 попыток по 50мс = 1 секунда
+      
+      while (attempts < maxAttempts) {
+        const savedToken = localStorage.getItem('token');
+        if (savedToken && savedToken === token) {
+          console.log('Токен успешно сохранен в localStorage');
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+        attempts++;
+      }
+      
+      // Проверяем еще раз перед редиректом
+      const finalToken = localStorage.getItem('token');
+      if (!finalToken || finalToken !== token) {
+        console.error('Токен не сохранился в localStorage. Ожидаемый:', token?.substring(0, 20), '... Полученный:', finalToken?.substring(0, 20));
+        setError('Ошибка сохранения данных авторизации');
+        return;
+      }
+      
       router.push('/');
     } catch (err) {
       if (err instanceof ApiError) {

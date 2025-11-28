@@ -78,12 +78,12 @@ async function handleResponse<T>(response: Response, clearAuthOn401: boolean = t
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  // Пробуем сначала с credentials, чтобы установить cookies
-  let response: Response;
+  // Шаг 1: Выполняем вход через /user/login/
+  let loginResponse: Response;
   let useCredentials = true;
   
   try {
-    response = await fetch(`${API_BASE_URL}/user/login/`, {
+    loginResponse = await fetch(`${API_BASE_URL}/user/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -96,7 +96,7 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
     if (fetchError instanceof TypeError || (fetchError as Error)?.message?.includes('Failed to fetch')) {
       console.warn('CORS ошибка с credentials при логине, пробуем без credentials');
       useCredentials = false;
-      response = await fetch(`${API_BASE_URL}/user/login/`, {
+      loginResponse = await fetch(`${API_BASE_URL}/user/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,107 +108,50 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
     }
   }
   
-  // Проверяем заголовки ответа - возможно токен там
-  const authHeader = response.headers.get('Authorization');
-  const setCookieHeader = response.headers.get('Set-Cookie');
-  
-  console.log('Заголовки ответа:');
-  console.log('Authorization:', authHeader);
-  console.log('Set-Cookie:', setCookieHeader);
-  console.log('Все заголовки:', Object.fromEntries(response.headers.entries()));
-  
   // clearAuthOn401 = false, так как при логине 401 означает неверные учетные данные, а не истекшую сессию
-  const data = await handleResponse<any>(response, false);
+  const loginData = await handleResponse<any>(loginResponse, false);
   
   // Логируем ответ для отладки
-  console.log('Сырой ответ от API login:', data);
+  console.log('Ответ от API login:', loginData);
   
-  // Пробуем найти токен в различных местах
-  let accessToken = '';
-  let refreshToken = '';
-  
-  // 1. В теле ответа
-  accessToken = data.access || data.token || data.access_token || data.accessToken || '';
-  refreshToken = data.refresh || data.refresh_token || data.refreshToken || '';
-  
-  // 2. В заголовке Authorization
-  if (!accessToken && authHeader) {
-    // Может быть "Bearer token" или просто "token"
-    accessToken = authHeader.replace('Bearer ', '').trim();
+  // Шаг 2: Получаем токен через /user/token/ (передаем email и password)
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetch(`${API_BASE_URL}/user/token/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+      }),
+      ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
+    });
+  } catch (fetchError) {
+    console.error('Ошибка при запросе токена:', fetchError);
+    throw new ApiError('Ошибка при получении токена', 500);
   }
   
-  // 3. В cookies (если есть)
-  if (!accessToken && setCookieHeader) {
-    const cookies = setCookieHeader.split(';');
-    for (const cookie of cookies) {
-      if (cookie.includes('access') || cookie.includes('token')) {
-        const match = cookie.match(/(?:access|token)=([^;]+)/i);
-        if (match) {
-          accessToken = match[1];
-        }
-      }
-    }
-  }
+  // Обрабатываем ответ (handleResponse сам проверит статус и выбросит ошибку если нужно)
+  const tokenData = await handleResponse<any>(tokenResponse, false);
+  console.log('Ответ от API token:', tokenData);
   
-  // 4. Проверяем cookies в браузере напрямую
-  if (!accessToken && typeof window !== 'undefined') {
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const trimmed = cookie.trim();
-      if (trimmed.includes('access') || trimmed.includes('token') || trimmed.includes('auth')) {
-        const parts = trimmed.split('=');
-        if (parts.length === 2 && parts[1]) {
-          console.log('Найден токен в cookies браузера:', parts[0]);
-          accessToken = parts[1];
-          break;
-        }
-      }
-    }
-  }
+  // Извлекаем токен из ответа
+  const accessToken = tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '';
+  const refreshToken = tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '';
   
-  // 5. Если токена все еще нет, пробуем получить его через отдельный запрос
   if (!accessToken) {
-    console.warn('Токен не найден в ответе API и cookies. Пробуем получить через отдельный запрос...');
-    console.log('Полный ответ API:', JSON.stringify(data, null, 2));
-    
-    // Пробуем сделать запрос к защищенному эндпоинту, чтобы проверить, работает ли авторизация через cookies
-    try {
-      const testResponse = await fetch(`${API_BASE_URL}/catalog/track/favorite/all/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
-      });
-      
-      if (testResponse.ok) {
-        console.log('Запрос к избранным трекам успешен без токена - используем сессионную авторизацию');
-        accessToken = 'SESSION_AUTH';
-      } else if (testResponse.status === 401) {
-        console.warn('Запрос к избранным трекам вернул 401 - токен действительно нужен');
-        // Проверяем, может быть токен в заголовках ответа
-        const testAuthHeader = testResponse.headers.get('Authorization');
-        if (testAuthHeader) {
-          accessToken = testAuthHeader.replace('Bearer ', '').trim();
-          console.log('Токен найден в заголовке ответа тестового запроса');
-        } else {
-          accessToken = useCredentials ? 'SESSION_AUTH' : 'NO_TOKEN';
-        }
-      } else {
-        accessToken = useCredentials ? 'SESSION_AUTH' : 'NO_TOKEN';
-      }
-    } catch (testError) {
-      console.warn('Тестовый запрос не удался:', testError);
-      accessToken = useCredentials ? 'SESSION_AUTH' : 'NO_TOKEN';
-    }
+    console.error('Токен не найден в ответе /user/token/. Полный ответ:', JSON.stringify(tokenData, null, 2));
+    throw new ApiError('Не удалось получить токен авторизации', 500);
   }
   
-  // Нормализуем ответ
+  // Нормализуем ответ, объединяя данные пользователя из login и токен из token
   const normalizedResponse: AuthResponse = {
     access: accessToken,
     refresh: refreshToken,
-    username: data.username || data.user?.username || credentials.email.split('@')[0],
-    email: data.email || data.user?.email || credentials.email,
+    username: loginData.username || loginData.user?.username || credentials.email.split('@')[0],
+    email: loginData.email || loginData.user?.email || credentials.email,
   };
   
   console.log('Нормализованный ответ:', normalizedResponse);
@@ -217,16 +160,107 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function signup(userData: SignupRequest): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/user/signup/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(userData),
-  });
+  // Шаг 1: Выполняем регистрацию через /user/signup/
+  let signupResponse: Response;
+  let useCredentials = true;
+  
+  try {
+    signupResponse = await fetch(`${API_BASE_URL}/user/signup/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+      credentials: 'include', // Для установки cookies
+    });
+  } catch (fetchError) {
+    // Если CORS ошибка, пробуем без credentials
+    if (fetchError instanceof TypeError || (fetchError as Error)?.message?.includes('Failed to fetch')) {
+      console.warn('CORS ошибка с credentials при регистрации, пробуем без credentials');
+      useCredentials = false;
+      signupResponse = await fetch(`${API_BASE_URL}/user/signup/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+    } else {
+      throw fetchError;
+    }
+  }
   
   // clearAuthOn401 = false, так как при регистрации 401 означает ошибку регистрации, а не истекшую сессию
-  return handleResponse<AuthResponse>(response, false);
+  const signupData = await handleResponse<any>(signupResponse, false);
+  
+  console.log('Ответ от API signup:', signupData);
+  
+  // Шаг 2: После регистрации нужно сначала войти через /user/login/
+  // Это необходимо для установки сессии перед получением токена
+  let loginResponse: Response;
+  try {
+    loginResponse = await fetch(`${API_BASE_URL}/user/login/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userData.email,
+        password: userData.password,
+      }),
+      ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
+    });
+  } catch (fetchError) {
+    console.error('Ошибка при входе после регистрации:', fetchError);
+    throw new ApiError('Ошибка при входе после регистрации', 500);
+  }
+  
+  const loginData = await handleResponse<any>(loginResponse, false);
+  console.log('Ответ от API login после регистрации:', loginData);
+  
+  // Шаг 3: Получаем токен через /user/token/ (передаем email и password)
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetch(`${API_BASE_URL}/user/token/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userData.email,
+        password: userData.password,
+      }),
+      ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
+    });
+  } catch (fetchError) {
+    console.error('Ошибка при запросе токена:', fetchError);
+    throw new ApiError('Ошибка при получении токена', 500);
+  }
+  
+  // Обрабатываем ответ (handleResponse сам проверит статус и выбросит ошибку если нужно)
+  const tokenData = await handleResponse<any>(tokenResponse, false);
+  console.log('Ответ от API token:', tokenData);
+  
+  // Извлекаем токен из ответа
+  const accessToken = tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '';
+  const refreshToken = tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '';
+  
+  if (!accessToken) {
+    console.error('Токен не найден в ответе /user/token/. Полный ответ:', JSON.stringify(tokenData, null, 2));
+    throw new ApiError('Не удалось получить токен авторизации', 500);
+  }
+  
+  // Нормализуем ответ, объединяя данные пользователя из signup/login и токен из token
+  const normalizedResponse: AuthResponse = {
+    access: accessToken,
+    refresh: refreshToken,
+    username: signupData.username || loginData.username || signupData.user?.username || loginData.user?.username || userData.username,
+    email: signupData.email || loginData.email || signupData.user?.email || loginData.user?.email || userData.email,
+  };
+  
+  console.log('Нормализованный ответ:', normalizedResponse);
+  
+  return normalizedResponse;
 }
 
 export async function getTracks(token?: string | null): Promise<Track[]> {

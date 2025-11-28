@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { updateTrack, setCurrentTrack } from '../store/musicSlice';
+import { updateTrack } from '../store/musicSlice';
 import { likeTrack, unlikeTrack, ApiError } from '../api/api';
 import { Track } from '../types/Track';
 
@@ -58,12 +58,8 @@ export const useLikeTrack = (track: Track | null): UseLikeTrackReturn => {
     actionApi(track._id, token)
       .then((updatedTrack) => {
         // Обновляем трек в Redux
+        // updateTrack автоматически обновит currentTrack, если это он
         dispatch(updateTrack(updatedTrack));
-
-        // Если это текущий трек, обновляем его
-        if (currentTrack?._id === track._id) {
-          dispatch(setCurrentTrack(updatedTrack));
-        }
       })
       .catch((error) => {
         console.error('Ошибка при изменении статуса лайка:', error);
