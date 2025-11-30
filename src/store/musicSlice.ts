@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Track } from '../types/Track';
+import { logout } from './authSlice';
 
 interface MusicState {
   currentTrack: Track | null;
@@ -12,6 +13,7 @@ interface MusicState {
   isRepeatOn: boolean;
   shuffledTracks: Track[];
   favoriteTracks: Track[];
+  likedTrackIds: number[]; // Массив ID лайкнутых треков
 }
 
 const initialState: MusicState = {
@@ -25,6 +27,7 @@ const initialState: MusicState = {
   isRepeatOn: false,
   shuffledTracks: [],
   favoriteTracks: [],
+  likedTrackIds: [], // Массив ID лайкнутых треков
 };
 
 const musicSlice = createSlice({
@@ -162,6 +165,8 @@ const musicSlice = createSlice({
     },
     setFavoriteTracks: (state, action: PayloadAction<Track[]>) => {
       state.favoriteTracks = action.payload;
+      // Автоматически обновляем массив ID лайкнутых треков
+      state.likedTrackIds = action.payload.map((track) => track._id);
     },
     addFavoriteTrack: (state, action: PayloadAction<Track>) => {
       const track = action.payload;
@@ -236,6 +241,16 @@ const musicSlice = createSlice({
         };
       }
     },
+    setLikedTrackIds: (state, action: PayloadAction<number[]>) => {
+      state.likedTrackIds = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    // Очищаем likedTrackIds при выходе пользователя
+    builder.addCase(logout, (state) => {
+      state.likedTrackIds = [];
+      state.favoriteTracks = [];
+    });
   },
 });
 
@@ -258,6 +273,7 @@ export const {
   addFavoriteTrack,
   removeFavoriteTrack,
   updateTrack,
+  setLikedTrackIds,
 } = musicSlice.actions;
 
 export default musicSlice.reducer;

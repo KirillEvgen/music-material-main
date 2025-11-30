@@ -32,9 +32,6 @@ export default function TrackItem({ track, onTrackUpdate }: TrackItemProps) {
   const handleLikeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     toggleLike();
-    // Обновляем трек в родительском компоненте после успешного лайка
-    // Это будет сделано через Redux updateTrack, но для совместимости
-    // можно также вызвать onTrackUpdate, если он предоставлен
   }, [toggleLike]);
 
   const isCurrentTrack = useMemo(() => currentTrack?._id === track._id, [currentTrack, track]);

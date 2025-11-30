@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { updateTrack } from '../store/musicSlice';
-import { likeTrack, unlikeTrack, ApiError } from '../api/api';
+import { setLikedTrackIds } from '../store/musicSlice';
+import { likeTrack, unlikeTrack, getFavoriteTracks, ApiError } from '../api/api';
 import { Track } from '../types/Track';
 
 type UseLikeTrackReturn = {
@@ -13,23 +13,18 @@ type UseLikeTrackReturn = {
 
 export const useLikeTrack = (track: Track | null): UseLikeTrackReturn => {
   const dispatch = useAppDispatch();
-  const favoriteTracks = useAppSelector((state) => state.music.favoriteTracks);
+  const likedTrackIds = useAppSelector((state) => state.music.likedTrackIds);
   const token = useAppSelector((state) => state.auth.token);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const currentTrack = useAppSelector((state) => state.music.currentTrack);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Проверяем, лайкнут ли трек
+  // Проверяем, лайкнут ли трек по массиву ID из Redux
   const isLiked = useMemo(() => {
     if (!track || !isAuthenticated) return false;
-    // Проверяем, есть ли трек в избранных
-    const inFavorites = favoriteTracks.some((t) => t._id === track._id);
-    // Также проверяем stared_user в самом треке
-    const hasLikes = track.stared_user && track.stared_user.length > 0;
-    return inFavorites || hasLikes;
-  }, [track, favoriteTracks, isAuthenticated]);
+    return likedTrackIds.includes(track._id);
+  }, [track, likedTrackIds, isAuthenticated]);
 
   const toggleLike = useCallback(() => {
     if (!track) {
@@ -56,10 +51,14 @@ export const useLikeTrack = (track: Track | null): UseLikeTrackReturn => {
     const actionApi = isLiked ? unlikeTrack : likeTrack;
 
     actionApi(track._id, token)
-      .then((updatedTrack) => {
-        // Обновляем трек в Redux
-        // updateTrack автоматически обновит currentTrack, если это он
-        dispatch(updateTrack(updatedTrack));
+      .then(() => {
+        // После успешного лайка/дизлайка получаем обновленный список избранных треков
+        return getFavoriteTracks(token);
+      })
+      .then((favoriteTracks) => {
+        // Извлекаем массив ID из избранных треков и обновляем Redux
+        const favoriteTrackIds = favoriteTracks.map((t) => t._id);
+        dispatch(setLikedTrackIds(favoriteTrackIds));
       })
       .catch((error) => {
         console.error('Ошибка при изменении статуса лайка:', error);
@@ -82,7 +81,7 @@ export const useLikeTrack = (track: Track | null): UseLikeTrackReturn => {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [track, isLiked, token, isAuthenticated, currentTrack, dispatch]);
+  }, [track, isLiked, token, isAuthenticated, dispatch]);
 
   return {
     isLoading,
