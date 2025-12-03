@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +18,11 @@ export default function Header({ isMenuOpen, onMenuToggle }: HeaderProps) {
   const router = useRouter();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const user = useAppSelector((state) => state.auth.user);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -53,7 +59,13 @@ export default function Header({ isMenuOpen, onMenuToggle }: HeaderProps) {
               Мой плейлист
             </Link>
           </li>
-          {isAuthenticated ? (
+          {!mounted ? (
+            <li className={styles.menu__item}>
+              <Link href="/auth/signin" className={styles.menu__link}>
+                Войти
+              </Link>
+            </li>
+          ) : isAuthenticated ? (
             <>
               {user && (
                 <li className={styles.menu__item}>

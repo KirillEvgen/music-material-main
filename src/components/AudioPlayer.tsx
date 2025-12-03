@@ -16,136 +16,107 @@ export default function AudioPlayer() {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !currentTrack) return;
 
     console.log('useEffect [isPlaying, currentTrack] triggered. isPlaying:', isPlaying, 'track:', currentTrack?.name);
 
     let intervalId: NodeJS.Timeout | null = null;
 
-    if (isPlaying) {
-      const tryPlay = () => {
-        if (audio.readyState >= 1) {
-          // HAVE_METADATA или выше
-          audio
-            .play()
-            .then(() => {
-              // Проверяем duration после начала воспроизведения
-              if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+    const startPlayback = () => {
+      // Проверяем, что трек загружен
+      if (!audio.src || audio.readyState === 0) {
+        console.log('Трек еще не загружен, ждем...');
+        return;
+      }
+
+      audio
+        .play()
+        .then(() => {
+          console.log('Воспроизведение началось');
+          // Проверяем duration после начала воспроизведения
+          if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+            dispatch(setDuration(audio.duration));
+            durationSetRef.current = true;
+          }
+          // Запускаем принудительное обновление времени
+          intervalId = setInterval(() => {
+            if (audio && !audio.paused) {
+              const currentTime = audio.currentTime;
+              dispatch(setCurrentTime(currentTime));
+              // Проверяем duration только если еще не установлена
+              if (!durationSetRef.current && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
                 dispatch(setDuration(audio.duration));
                 durationSetRef.current = true;
               }
-              // Запускаем принудительное обновление времени
-              intervalId = setInterval(() => {
-                if (audio && !audio.paused) {
-                  const currentTime = audio.currentTime;
-                  dispatch(setCurrentTime(currentTime));
-                  // Проверяем duration только если еще не установлена
-                  if (!durationSetRef.current && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                    dispatch(setDuration(audio.duration));
-                    durationSetRef.current = true;
-                  }
-                  
-                  // Резервный механизм: если трек закончился (осталось меньше 0.2 сек)
-                  if (audio.duration && audio.duration - currentTime < 0.2 && audio.duration - currentTime >= 0 && !trackEndHandledRef.current) {
-                    console.log('Трек почти закончился! Осталось:', audio.duration - currentTime, 'сек');
-                    console.log('Вызываем переключение трека через резервный механизм');
-                    
-                    // Отмечаем, что обработали конец трека
-                    trackEndHandledRef.current = true;
-                    
-                    // Останавливаем интервал
-                    if (intervalId) {
-                      clearInterval(intervalId);
-                    }
-                    
-                    // Вызываем логику переключения
-                    if (isRepeatOn) {
-                      console.log('Повторяем трек (резервный механизм)');
-                      audio.currentTime = 0;
-                      dispatch(setCurrentTime(0));
-                      trackEndHandledRef.current = false;
-                      audio.play().catch(console.error);
-                    } else {
-                      console.log('Переключаемся на следующий трек (резервный механизм)');
-                      dispatch(setCurrentTime(0));
-                      dispatch(playNext());
-                    }
-                  }
+              
+              // Резервный механизм: если трек закончился (осталось меньше 0.2 сек)
+              if (audio.duration && audio.duration - currentTime < 0.2 && audio.duration - currentTime >= 0 && !trackEndHandledRef.current) {
+                console.log('Трек почти закончился! Осталось:', audio.duration - currentTime, 'сек');
+                console.log('Вызываем переключение трека через резервный механизм');
+                
+                // Отмечаем, что обработали конец трека
+                trackEndHandledRef.current = true;
+                
+                // Останавливаем интервал
+                if (intervalId) {
+                  clearInterval(intervalId);
                 }
-              }, 100);
-            })
-            .catch((error) => {
-              console.error('Ошибка воспроизведения:', error);
-              dispatch(setIsPlaying(false));
-            });
-        } else {
-          // Ждем события canplay
-          const handleCanPlayOnce = () => {
-            audio
-              .play()
-              .then(() => {
-                // Проверяем duration после начала воспроизведения
-                if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                  dispatch(setDuration(audio.duration));
-                  durationSetRef.current = true;
+                
+                // Вызываем логику переключения
+                if (isRepeatOn) {
+                  console.log('Повторяем трек (резервный механизм)');
+                  audio.currentTime = 0;
+                  dispatch(setCurrentTime(0));
+                  trackEndHandledRef.current = false;
+                  audio.play().catch(console.error);
+                } else {
+                  console.log('Переключаемся на следующий трек (резервный механизм)');
+                  dispatch(setCurrentTime(0));
+                  dispatch(playNext());
                 }
-                // Запускаем принудительное обновление времени
-                intervalId = setInterval(() => {
-                  if (audio && !audio.paused) {
-                    const currentTime = audio.currentTime;
-                    dispatch(setCurrentTime(currentTime));
-                    // Проверяем duration только если еще не установлена
-                    if (!durationSetRef.current && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                      dispatch(setDuration(audio.duration));
-                      durationSetRef.current = true;
-                    }
-                    
-                    // Резервный механизм: если трек закончился (осталось меньше 0.2 сек)
-                    if (audio.duration && audio.duration - currentTime < 0.2 && audio.duration - currentTime >= 0 && !trackEndHandledRef.current) {
-                      console.log('Трек почти закончился! Осталось:', audio.duration - currentTime, 'сек');
-                      console.log('Вызываем переключение трека через резервный механизм');
-                      
-                      // Отмечаем, что обработали конец трека
-                      trackEndHandledRef.current = true;
-                      
-                      // Останавливаем интервал
-                      if (intervalId) {
-                        clearInterval(intervalId);
-                      }
-                      
-                      // Вызываем логику переключения
-                      if (isRepeatOn) {
-                        console.log('Повторяем трек (резервный механизм)');
-                        audio.currentTime = 0;
-                        dispatch(setCurrentTime(0));
-                        trackEndHandledRef.current = false;
-                        audio.play().catch(console.error);
-                      } else {
-                        console.log('Переключаемся на следующий трек (резервный механизм)');
-                        dispatch(setCurrentTime(0));
-                        dispatch(playNext());
-                      }
-                    }
-                  }
-                }, 100);
-              })
-              .catch((error) => {
-                console.error('Ошибка воспроизведения:', error);
-                dispatch(setIsPlaying(false));
-              });
-            audio.removeEventListener('canplay', handleCanPlayOnce);
-          };
-          audio.addEventListener('canplay', handleCanPlayOnce);
-        }
-      };
+              }
+            }
+          }, 100);
+        })
+        .catch((error) => {
+          console.error('Ошибка воспроизведения:', error);
+          dispatch(setIsPlaying(false));
+        });
+    };
 
-      // Задержка для загрузки аудио
-      setTimeout(tryPlay, 500);
+    if (isPlaying) {
+      // Если трек уже готов, начинаем воспроизведение сразу
+      if (audio.readyState >= 2) { // HAVE_CURRENT_DATA или выше
+        startPlayback();
+      } else {
+        // Ждем события canplay или canplaythrough
+        const handleCanPlay = () => {
+          console.log('Трек готов к воспроизведению');
+          startPlayback();
+          audio.removeEventListener('canplay', handleCanPlay);
+          audio.removeEventListener('canplaythrough', handleCanPlay);
+        };
+        
+        audio.addEventListener('canplay', handleCanPlay);
+        audio.addEventListener('canplaythrough', handleCanPlay);
+        
+        // Если трек уже загружается, но событие еще не произошло, пробуем через небольшую задержку
+        if (audio.readyState >= 1) {
+          setTimeout(() => {
+            if (audio.readyState >= 2 && isPlaying) {
+              startPlayback();
+              audio.removeEventListener('canplay', handleCanPlay);
+              audio.removeEventListener('canplaythrough', handleCanPlay);
+            }
+          }, 100);
+        }
+      }
     } else {
       audio.pause();
       // Останавливаем обновление времени при паузе
       if (intervalId) {
         clearInterval(intervalId);
+        intervalId = null;
       }
     }
 
@@ -154,7 +125,7 @@ export default function AudioPlayer() {
         clearInterval(intervalId);
       }
     };
-  }, [isPlaying, dispatch, currentTrack]);
+  }, [isPlaying, dispatch, currentTrack, isRepeatOn]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -167,9 +138,20 @@ export default function AudioPlayer() {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
+    // Проверяем, что у трека есть track_file
+    if (!currentTrack.track_file) {
+      console.error('Трек не имеет track_file:', currentTrack);
+      dispatch(setIsPlaying(false));
+      return;
+    }
+
     // Сбрасываем флаги при смене трека
     durationSetRef.current = false;
     trackEndHandledRef.current = false;
+
+    // Останавливаем текущее воспроизведение
+    audio.pause();
+    audio.currentTime = 0;
 
     // Очищаем предыдущий src перед установкой нового
     audio.src = '';
@@ -178,25 +160,10 @@ export default function AudioPlayer() {
     // Устанавливаем новый src
     console.log('Загружаем трек:', currentTrack.name, currentTrack.track_file);
 
-    // Проверяем URL на доступность
-    fetch(currentTrack.track_file, { method: 'HEAD' })
-      .then((response) => {
-        console.log('URL доступен, статус:', response.status);
-        if (response.ok) {
-          audio.src = currentTrack.track_file;
-          audio.preload = 'auto';
-          audio.load();
-        } else {
-          console.error('URL недоступен, статус:', response.status);
-        }
-      })
-      .catch((error) => {
-        console.error('Ошибка проверки URL:', error);
-        // Все равно пытаемся загрузить
-        audio.src = currentTrack.track_file;
-        audio.preload = 'auto';
-        audio.load();
-      });
+    // Устанавливаем src напрямую - браузер сам загрузит трек
+    audio.src = currentTrack.track_file;
+    audio.preload = 'auto';
+    audio.load();
 
     // Сбрасываем время при загрузке нового трека
     dispatch(setCurrentTime(0));
@@ -206,6 +173,9 @@ export default function AudioPlayer() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Используем ref для хранения текущего значения isPlaying в обработчиках
+    const isPlayingRef = { current: isPlaying };
 
     const handleLoadedMetadata = () => {
       console.log('loadedmetadata event, duration:', audio.duration);
@@ -243,7 +213,18 @@ export default function AudioPlayer() {
         dispatch(setDuration(audio.duration));
         durationSetRef.current = true;
       }
+      // Если isPlaying уже true и трек не играет, начинаем воспроизведение
+      if (isPlayingRef.current && audio.src && audio.paused) {
+        console.log('Автоматически начинаем воспроизведение после загрузки');
+        audio.play().catch((error) => {
+          console.error('Ошибка автовоспроизведения после загрузки:', error);
+          dispatch(setIsPlaying(false));
+        });
+      }
     };
+    
+    // Обновляем ref при изменении isPlaying
+    isPlayingRef.current = isPlaying;
     
     const handleLoadedData = () => {
       // Данные загружены - проверяем duration еще раз
@@ -281,7 +262,7 @@ export default function AudioPlayer() {
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('progress', handleProgress);
     };
-  }, [dispatch, isRepeatOn, playNext]);
+  }, [dispatch, isRepeatOn, isPlaying, playNext]);
 
   if (!currentTrack) return null;
 

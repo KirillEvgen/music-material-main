@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { 
   togglePlayPause, 
@@ -9,8 +9,10 @@ import {
   playPrevious, 
   setCurrentTime,
   toggleShuffle,
-  toggleRepeat
+  toggleRepeat,
+  setCurrentTrack
 } from '../store/musicSlice';
+import { useLikeTrack } from '../hooks/useLikeTrack';
 import styles from './Player.module.css';
 
 export default function Player() {
@@ -23,14 +25,25 @@ export default function Player() {
   const isShuffleOn = useAppSelector((state) => state.music.isShuffleOn);
   const isRepeatOn = useAppSelector((state) => state.music.isRepeatOn);
 
-  const formatTime = (seconds: number): string => {
+  const { isLoading: isLiking, errorMsg: error, toggleLike, isLiked: isTrackLiked } = useLikeTrack(currentTrack);
+
+  const formatTime = useCallback((seconds: number): string => {
     if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
       return '0:00';
     }
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, []);
+
+  const likesCount = useMemo(() => {
+    if (!currentTrack) return 0;
+    return currentTrack.stared_user?.length || 0;
+  }, [currentTrack]);
+
+  const handleLikeClick = useCallback(() => {
+    toggleLike();
+  }, [toggleLike]);
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!duration || duration === 0 || isNaN(duration)) {
@@ -185,18 +198,23 @@ export default function Player() {
                 </div>
               </div>
 
-              <div className={styles.trackPlay__dislike}>
-                <div className={styles.player__btnShuffle}>
-                  <svg className={styles.trackPlay__likeSvg}>
-                    <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
-                  </svg>
-                </div>
+              {currentTrack && (
                 <div className={styles.trackPlay__dislike}>
-                  <svg className={styles.trackPlay__dislikeSvg}>
-                    <use xlinkHref="/img/icon/sprite.svg#icon-dislike"></use>
-                  </svg>
+                  <button
+                    className={`${styles.trackPlay__likeButton} ${isTrackLiked ? styles.trackPlay__likeButtonActive : ''} ${isLiking ? styles.trackPlay__likeButtonLoading : ''}`}
+                    onClick={handleLikeClick}
+                    disabled={isLiking}
+                    title={isTrackLiked ? 'Удалить из избранного' : 'Добавить в избранное'}
+                  >
+                    <svg className={styles.trackPlay__likeSvg}>
+                      <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
+                    </svg>
+                    {likesCount > 0 && (
+                      <span className={styles.trackPlay__likesCount}>{likesCount}</span>
+                    )}
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className={styles.bar__volumeBlock}>

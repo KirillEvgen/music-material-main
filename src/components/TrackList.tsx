@@ -1,31 +1,18 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Track } from '../types/Track';
-import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { playTrack } from '../store/musicSlice';
+import TrackItem from './TrackItem';
 import styles from './TrackList.module.css';
 
 interface TrackListProps {
   tracks: Track[];
+  onTrackUpdate?: (updatedTrack: Track) => void;
 }
 
-export default function TrackList({ tracks }: TrackListProps) {
-  const dispatch = useAppDispatch();
-  const currentTrack = useAppSelector((state) => state.music.currentTrack);
-  const isPlaying = useAppSelector((state) => state.music.isPlaying);
-
+export default function TrackList({ tracks, onTrackUpdate }: TrackListProps) {
   // Убеждаемся, что tracks - это массив
-  const safeTracks = Array.isArray(tracks) ? tracks : [];
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handlePlay = (track: Track) => {
-    dispatch(playTrack(track));
-  };
+  const safeTracks = useMemo(() => Array.isArray(tracks) ? tracks : [], [tracks]);
 
   return (
     <div className={styles.centerblock__content}>
@@ -46,53 +33,13 @@ export default function TrackList({ tracks }: TrackListProps) {
         </div>
       </div>
       <div className={styles.content__playlist}>
-        {safeTracks.map((track) => {
-          const isCurrentTrack = currentTrack?._id === track._id;
-          return (
-            <div
-              key={track._id}
-              className={`${styles.playlist__item} ${isCurrentTrack ? styles.playlist__itemActive : ''}`}
-            >
-              <div className={styles.playlist__track}>
-                <div className={styles.track__title}>
-                  <div className={styles.track__titleImage}>
-                    {isCurrentTrack ? (
-                      <div className={`${styles.track__currentIndicator} ${isPlaying ? styles.track__currentIndicatorPulsing : ''}`}></div>
-                    ) : (
-                      <svg className={styles.track__titleSvg}>
-                        <use xlinkHref="/img/icon/sprite.svg#icon-note"></use>
-                      </svg>
-                    )}
-                  </div>
-                  <div className={styles.track__titleText}>
-                    <button
-                      className={styles.track__titleLink}
-                      onClick={() => handlePlay(track)}
-                    >
-                      {track.name}
-                    </button>
-                  </div>
-                </div>
-                <div className={styles.track__author}>
-                  <span className={styles.track__authorLink}>
-                    {track.author}
-                  </span>
-                </div>
-                <div className={styles.track__album}>
-                  <span className={styles.track__albumLink}>{track.album}</span>
-                </div>
-                <div className={styles.track__time}>
-                  <svg className={styles.track__timeSvg}>
-                    <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
-                  </svg>
-                  <span className={styles.track__timeText}>
-                    {formatTime(track.duration_in_seconds)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {safeTracks.map((track) => (
+          <TrackItem
+            key={track._id}
+            track={track}
+            onTrackUpdate={onTrackUpdate}
+          />
+        ))}
       </div>
     </div>
   );

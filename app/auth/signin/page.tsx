@@ -25,22 +25,83 @@ export default function Signin() {
 
     try {
       const response = await login({ email, password });
+      
+      // Логируем ответ для отладки
+      console.log('Ответ от API login:', response);
+      
+      // Проверяем различные возможные поля для токена
+      let token = response.access || (response as any).token || (response as any).access_token;
+      
+      // Если токен не найден, возможно API использует сессионную авторизацию
+      // В этом случае используем специальный маркер для сессионной авторизации
+      if (!token || (typeof token === 'string' && token.trim() === '')) {
+        console.warn('Токен не найден в ответе. API может использовать сессионную авторизацию через cookies.');
+        console.log('Структура ответа:', JSON.stringify(response, null, 2));
+        
+        // Используем специальный маркер для сессионной авторизации
+        // В запросах будем полагаться на cookies
+        token = 'SESSION_AUTH'; // Специальный маркер
+        console.log('Используем сессионную авторизацию через cookies');
+      } else {
+        console.log('Токен получен, длина:', token.length);
+      }
+      
       dispatch(
         setCredentials({
           user: {
-            id: 0, // API не возвращает id, используем 0
-            username: response.username,
-            email: response.email,
+            id: (response as any).id || 0,
+            username: response.username || (response as any).user?.username || email.split('@')[0],
+            email: response.email || (response as any).user?.email || email,
           },
-          token: response.access,
+          token: token,
         })
       );
-      router.push('/');
+      
+      // Ждем, пока токен сохранится в localStorage
+      let attempts = 0;
+      const maxAttempts = 20; // 20 попыток по 50мс = 1 секунда
+      
+      while (attempts < maxAttempts) {
+        const savedToken = localStorage.getItem('token');
+        if (savedToken && savedToken === token) {
+          console.log('Токен успешно сохранен в localStorage');
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+        attempts++;
+      }
+      
+      // Проверяем еще раз перед редиректом
+      const finalToken = localStorage.getItem('token');
+      if (!finalToken || finalToken !== token) {
+        console.error('Токен не сохранился в localStorage. Ожидаемый:', token?.substring(0, 20), '... Полученный:', finalToken?.substring(0, 20));
+        setError('Ошибка сохранения данных авторизации');
+        return;
+      }
+      
+      // Проверяем, есть ли сохраненный путь для редиректа
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        console.log('Редирект на:', redirectPath);
+        router.push(redirectPath);
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
+        // Показываем более понятное сообщение для разных типов ошибок
+        if (err.status === 401) {
+          setError('Неверный email или пароль. Проверьте правильность введенных данных.');
+        } else if (err.status === 400) {
+          setError('Проверьте правильность введенных данных.');
+        } else if (err.status >= 500) {
+          setError('Сервер временно недоступен. Попробуйте позже.');
+        } else {
+          setError(err.message || 'Произошла ошибка при входе. Попробуйте еще раз.');
+        }
       } else {
-        setError('Произошла ошибка при входе. Попробуйте еще раз.');
+        setError('Произошла ошибка при входе. Проверьте подключение к интернету.');
       }
     } finally {
       setIsLoading(false);

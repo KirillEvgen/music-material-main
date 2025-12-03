@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Track } from '../types/Track';
+import { logout } from './authSlice';
 
 interface MusicState {
   currentTrack: Track | null;
@@ -11,6 +12,8 @@ interface MusicState {
   isShuffleOn: boolean;
   isRepeatOn: boolean;
   shuffledTracks: Track[];
+  favoriteTracks: Track[];
+  likedTrackIds: number[]; // Массив ID лайкнутых треков
 }
 
 const initialState: MusicState = {
@@ -23,6 +26,8 @@ const initialState: MusicState = {
   isShuffleOn: false,
   isRepeatOn: false,
   shuffledTracks: [],
+  favoriteTracks: [],
+  likedTrackIds: [], // Массив ID лайкнутых треков
 };
 
 const musicSlice = createSlice({
@@ -158,6 +163,94 @@ const musicSlice = createSlice({
     toggleRepeat: (state) => {
       state.isRepeatOn = !state.isRepeatOn;
     },
+    setFavoriteTracks: (state, action: PayloadAction<Track[]>) => {
+      state.favoriteTracks = action.payload;
+      // Автоматически обновляем массив ID лайкнутых треков
+      state.likedTrackIds = action.payload.map((track) => track._id);
+    },
+    addFavoriteTrack: (state, action: PayloadAction<Track>) => {
+      const track = action.payload;
+      if (!state.favoriteTracks.find((t) => t._id === track._id)) {
+        state.favoriteTracks.push(track);
+      }
+    },
+    removeFavoriteTrack: (state, action: PayloadAction<number>) => {
+      state.favoriteTracks = state.favoriteTracks.filter((t) => t._id !== action.payload);
+    },
+    updateTrack: (state, action: PayloadAction<Track>) => {
+      const updatedTrack = action.payload;
+      
+      // Обновляем трек в списке tracks, сохраняя все поля оригинального трека
+      const trackIndex = state.tracks.findIndex((t) => t._id === updatedTrack._id);
+      if (trackIndex !== -1) {
+        // Сохраняем оригинальный трек и обновляем только измененные поля
+        const originalTrack = state.tracks[trackIndex];
+        state.tracks[trackIndex] = {
+          ...originalTrack,
+          ...updatedTrack,
+          // Убеждаемся, что важные поля не потеряны
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+        };
+      }
+      
+      // Обновляем текущий трек, если это он, сохраняя все поля
+      if (state.currentTrack?._id === updatedTrack._id) {
+        // Сохраняем оригинальный трек и обновляем только измененные поля
+        const originalTrack = state.currentTrack;
+        state.currentTrack = {
+          ...originalTrack,
+          ...updatedTrack,
+          // Убеждаемся, что важные поля не потеряны (особенно track_file для воспроизведения)
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+          name: updatedTrack.name || originalTrack.name,
+          author: updatedTrack.author || originalTrack.author,
+          album: updatedTrack.album || originalTrack.album,
+        };
+      }
+      
+      // Обновляем в избранных треках
+      const favoriteIndex = state.favoriteTracks.findIndex((t) => t._id === updatedTrack._id);
+      if (favoriteIndex !== -1) {
+        // Если трек больше не в избранном, удаляем его
+        if (!updatedTrack.stared_user || updatedTrack.stared_user.length === 0) {
+          state.favoriteTracks.splice(favoriteIndex, 1);
+        } else {
+          // Сохраняем оригинальный трек и обновляем только измененные поля
+          const originalTrack = state.favoriteTracks[favoriteIndex];
+          state.favoriteTracks[favoriteIndex] = {
+            ...originalTrack,
+            ...updatedTrack,
+            track_file: updatedTrack.track_file || originalTrack.track_file,
+          };
+        }
+      } else {
+        // Если трек добавлен в избранное, добавляем его
+        if (updatedTrack.stared_user && updatedTrack.stared_user.length > 0) {
+          state.favoriteTracks.push(updatedTrack);
+        }
+      }
+      
+      // Обновляем в перемешанном списке, если он есть
+      const shuffledIndex = state.shuffledTracks.findIndex((t) => t._id === updatedTrack._id);
+      if (shuffledIndex !== -1) {
+        const originalTrack = state.shuffledTracks[shuffledIndex];
+        state.shuffledTracks[shuffledIndex] = {
+          ...originalTrack,
+          ...updatedTrack,
+          track_file: updatedTrack.track_file || originalTrack.track_file,
+        };
+      }
+    },
+    setLikedTrackIds: (state, action: PayloadAction<number[]>) => {
+      state.likedTrackIds = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    // Очищаем likedTrackIds при выходе пользователя
+    builder.addCase(logout, (state) => {
+      state.likedTrackIds = [];
+      state.favoriteTracks = [];
+    });
   },
 });
 
@@ -176,6 +269,11 @@ export const {
   playPrevious,
   toggleShuffle,
   toggleRepeat,
+  setFavoriteTracks,
+  addFavoriteTrack,
+  removeFavoriteTrack,
+  updateTrack,
+  setLikedTrackIds,
 } = musicSlice.actions;
 
 export default musicSlice.reducer;
