@@ -31,6 +31,9 @@
   padding: 6px 20px;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .filter__button:not(:last-child) {
@@ -46,6 +49,19 @@
 .filter__button_active {
   border-color: #ad61ff;
   color: #ad61ff;
+}
+
+.filter__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  background-color: #ad61ff;
+  border-radius: 50%;
+  font-size: 13px;
+  color: white;
+  padding: 2px 6px;
 }
 
 .filter__wrapper {
@@ -93,4 +109,32 @@
 
 .filter__item:hover {
   color: #ad61ff;
+}
+
+.filter__item_active {
+  color: #ad61ff;
+  font-weight: 500;
+}
+
+.filter__sortOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter__divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 10px 0;
+}
+
+.filter__yearsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter__yearItem {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
 }

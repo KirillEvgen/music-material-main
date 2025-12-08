@@ -2,6 +2,17 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Track } from '../types/Track';
 import { logout } from './authSlice';
 
+// Типы для фильтров
+export type SortOrder = 'default' | 'newest' | 'oldest';
+
+export interface FilterState {
+  searchQuery: string;
+  selectedAuthors: string[];
+  selectedGenres: string[];
+  selectedYears: number[];
+  sortOrder: SortOrder;
+}
+
 interface MusicState {
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -13,8 +24,17 @@ interface MusicState {
   isRepeatOn: boolean;
   shuffledTracks: Track[];
   favoriteTracks: Track[];
-  likedTrackIds: number[]; // Массив ID лайкнутых треков
+  likedTrackIds: number[];
+  filters: FilterState;
 }
+
+const initialFilterState: FilterState = {
+  searchQuery: '',
+  selectedAuthors: [],
+  selectedGenres: [],
+  selectedYears: [],
+  sortOrder: 'default',
+};
 
 const initialState: MusicState = {
   currentTrack: null,
@@ -27,7 +47,8 @@ const initialState: MusicState = {
   isRepeatOn: false,
   shuffledTracks: [],
   favoriteTracks: [],
-  likedTrackIds: [], // Массив ID лайкнутых треков
+  likedTrackIds: [],
+  filters: initialFilterState,
 };
 
 const musicSlice = createSlice({
@@ -50,11 +71,9 @@ const musicSlice = createSlice({
       state.duration = action.payload;
     },
     setTracks: (state, action: PayloadAction<Track[]>) => {
-      console.log('Redux - setTracks вызван с треками:', action.payload.length);
       state.tracks = action.payload;
     },
     playTrack: (state, action: PayloadAction<Track>) => {
-      console.log('Redux - playTrack вызван с треком:', action.payload.name);
       state.currentTrack = action.payload;
       state.currentTime = 0;
       state.duration = 0;
@@ -70,41 +89,27 @@ const musicSlice = createSlice({
       state.volume = action.payload;
     },
     playNext: (state) => {
-      console.log('Redux - playNext вызван');
-      if (!state.currentTrack || state.tracks.length === 0) {
-        console.log('Redux - playNext: нет текущего трека или треков в списке');
-        return;
-      }
+      if (!state.currentTrack || state.tracks.length === 0) return;
       
       const trackList = state.isShuffleOn && state.shuffledTracks.length > 0 
         ? state.shuffledTracks 
         : state.tracks;
       
-      if (trackList.length === 0) {
-        console.log('Redux - playNext: список треков пуст');
-        return;
-      }
+      if (trackList.length === 0) return;
       
       const currentIndex = trackList.findIndex(
         (track) => track._id === state.currentTrack!._id,
       );
       
-      console.log('Redux - playNext: текущий индекс:', currentIndex, 'из', trackList.length);
-      
-      // Если трек не найден, начинаем с первого
       const nextIndex = currentIndex === -1 
         ? 0 
         : (currentIndex + 1) % trackList.length;
       const nextTrack = trackList[nextIndex];
       
-      console.log('Redux - playNext: следующий трек:', nextTrack.name, 'индекс:', nextIndex);
-      
       state.currentTrack = nextTrack;
       state.currentTime = 0;
       state.duration = 0;
       state.isPlaying = true;
-      
-      console.log('Redux - playNext: isPlaying установлен в true');
     },
     playPrevious: (state) => {
       if (!state.currentTrack || state.tracks.length === 0) return;
@@ -119,7 +124,6 @@ const musicSlice = createSlice({
         (track) => track._id === state.currentTrack!._id,
       );
       
-      // Если трек не найден, начинаем с последнего
       const prevIndex = currentIndex === -1 
         ? trackList.length - 1 
         : (currentIndex === 0 ? trackList.length - 1 : currentIndex - 1);
@@ -134,16 +138,13 @@ const musicSlice = createSlice({
       state.isShuffleOn = !state.isShuffleOn;
       
       if (state.isShuffleOn) {
-        // Создаем перемешанный плейлист
         const shuffled = [...state.tracks];
         
-        // Перемешиваем с помощью алгоритма Фишера-Йейтса
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         
-        // Если есть текущий трек, перемещаем его в начало списка
         if (state.currentTrack) {
           const currentIndex = shuffled.findIndex(
             (track) => track._id === state.currentTrack!._id,
@@ -165,7 +166,6 @@ const musicSlice = createSlice({
     },
     setFavoriteTracks: (state, action: PayloadAction<Track[]>) => {
       state.favoriteTracks = action.payload;
-      // Автоматически обновляем массив ID лайкнутых треков
       state.likedTrackIds = action.payload.map((track) => track._id);
     },
     addFavoriteTrack: (state, action: PayloadAction<Track>) => {
@@ -180,42 +180,30 @@ const musicSlice = createSlice({
     updateTrack: (state, action: PayloadAction<Track>) => {
       const updatedTrack = action.payload;
       
-      // Обновляем трек в списке tracks, сохраняя все поля оригинального трека
       const trackIndex = state.tracks.findIndex((t) => t._id === updatedTrack._id);
       if (trackIndex !== -1) {
-        // Сохраняем оригинальный трек и обновляем только измененные поля
         const originalTrack = state.tracks[trackIndex];
         state.tracks[trackIndex] = {
           ...originalTrack,
           ...updatedTrack,
-          // Убеждаемся, что важные поля не потеряны
           track_file: updatedTrack.track_file || originalTrack.track_file,
         };
       }
       
-      // Обновляем текущий трек, если это он, сохраняя все поля
       if (state.currentTrack?._id === updatedTrack._id) {
-        // Сохраняем оригинальный трек и обновляем только измененные поля
         const originalTrack = state.currentTrack;
         state.currentTrack = {
           ...originalTrack,
           ...updatedTrack,
-          // Убеждаемся, что важные поля не потеряны (особенно track_file для воспроизведения)
           track_file: updatedTrack.track_file || originalTrack.track_file,
-          name: updatedTrack.name || originalTrack.name,
-          author: updatedTrack.author || originalTrack.author,
-          album: updatedTrack.album || originalTrack.album,
         };
       }
       
-      // Обновляем в избранных треках
       const favoriteIndex = state.favoriteTracks.findIndex((t) => t._id === updatedTrack._id);
       if (favoriteIndex !== -1) {
-        // Если трек больше не в избранном, удаляем его
         if (!updatedTrack.stared_user || updatedTrack.stared_user.length === 0) {
           state.favoriteTracks.splice(favoriteIndex, 1);
         } else {
-          // Сохраняем оригинальный трек и обновляем только измененные поля
           const originalTrack = state.favoriteTracks[favoriteIndex];
           state.favoriteTracks[favoriteIndex] = {
             ...originalTrack,
@@ -224,13 +212,11 @@ const musicSlice = createSlice({
           };
         }
       } else {
-        // Если трек добавлен в избранное, добавляем его
         if (updatedTrack.stared_user && updatedTrack.stared_user.length > 0) {
           state.favoriteTracks.push(updatedTrack);
         }
       }
       
-      // Обновляем в перемешанном списке, если он есть
       const shuffledIndex = state.shuffledTracks.findIndex((t) => t._id === updatedTrack._id);
       if (shuffledIndex !== -1) {
         const originalTrack = state.shuffledTracks[shuffledIndex];
@@ -244,9 +230,45 @@ const musicSlice = createSlice({
     setLikedTrackIds: (state, action: PayloadAction<number[]>) => {
       state.likedTrackIds = action.payload;
     },
+    // Редьюсеры для фильтров и поиска
+    setSearchQuery: (state, action: PayloadAction<string>) => {
+      state.filters.searchQuery = action.payload;
+    },
+    toggleAuthor: (state, action: PayloadAction<string>) => {
+      const author = action.payload;
+      const index = state.filters.selectedAuthors.indexOf(author);
+      if (index === -1) {
+        state.filters.selectedAuthors.push(author);
+      } else {
+        state.filters.selectedAuthors.splice(index, 1);
+      }
+    },
+    toggleGenre: (state, action: PayloadAction<string>) => {
+      const genre = action.payload;
+      const index = state.filters.selectedGenres.indexOf(genre);
+      if (index === -1) {
+        state.filters.selectedGenres.push(genre);
+      } else {
+        state.filters.selectedGenres.splice(index, 1);
+      }
+    },
+    toggleYear: (state, action: PayloadAction<number>) => {
+      const year = action.payload;
+      const index = state.filters.selectedYears.indexOf(year);
+      if (index === -1) {
+        state.filters.selectedYears.push(year);
+      } else {
+        state.filters.selectedYears.splice(index, 1);
+      }
+    },
+    setSortOrder: (state, action: PayloadAction<SortOrder>) => {
+      state.filters.sortOrder = action.payload;
+    },
+    resetFilters: (state) => {
+      state.filters = initialFilterState;
+    },
   },
   extraReducers: (builder) => {
-    // Очищаем likedTrackIds при выходе пользователя
     builder.addCase(logout, (state) => {
       state.likedTrackIds = [];
       state.favoriteTracks = [];
@@ -274,6 +296,12 @@ export const {
   removeFavoriteTrack,
   updateTrack,
   setLikedTrackIds,
+  setSearchQuery,
+  toggleAuthor,
+  toggleGenre,
+  toggleYear,
+  setSortOrder,
+  resetFilters,
 } = musicSlice.actions;
 
 export default musicSlice.reducer;
