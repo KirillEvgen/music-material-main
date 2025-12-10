@@ -257,7 +257,7 @@ export default function Favorites() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dispatch]);
 
   // Обновляем список при изменении трека
   const handleTracksChangeWithReload = useCallback((updatedTracks: Track[]) => {

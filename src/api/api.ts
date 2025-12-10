@@ -60,10 +60,7 @@ async function handleResponse<T>(response: Response, clearAuthOn401: boolean = t
       errorMessage = data;
     }
     
-    // Специальная обработка для 401 ошибок
-    // clearAuthOn401 = false для login/signup, чтобы не очищать токен при неверных учетных данных
     if (response.status === 401 && clearAuthOn401) {
-      // Очищаем токен из localStorage, если он там есть
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -78,7 +75,6 @@ async function handleResponse<T>(response: Response, clearAuthOn401: boolean = t
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  // Шаг 1: Выполняем вход через /user/login/
   let loginResponse: Response;
   let useCredentials = true;
   
@@ -89,12 +85,10 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(credentials),
-      credentials: 'include', // Пробуем с credentials для установки cookies
+      credentials: 'include',
     });
   } catch (fetchError) {
-    // Если CORS ошибка, пробуем без credentials
     if (fetchError instanceof TypeError || (fetchError as Error)?.message?.includes('Failed to fetch')) {
-      console.warn('CORS ошибка с credentials при логине, пробуем без credentials');
       useCredentials = false;
       loginResponse = await fetch(`${API_BASE_URL}/user/login/`, {
         method: 'POST',
@@ -108,13 +102,8 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
     }
   }
   
-  // clearAuthOn401 = false, так как при логине 401 означает неверные учетные данные, а не истекшую сессию
-  const loginData = await handleResponse<any>(loginResponse, false);
+  const loginData = await handleResponse<Record<string, unknown>>(loginResponse, false);
   
-  // Логируем ответ для отладки
-  console.log('Ответ от API login:', loginData);
-  
-  // Шаг 2: Получаем токен через /user/token/ (передаем email и password)
   let tokenResponse: Response;
   try {
     tokenResponse = await fetch(`${API_BASE_URL}/user/token/`, {
@@ -128,39 +117,30 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
       }),
       ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
     });
-  } catch (fetchError) {
-    console.error('Ошибка при запросе токена:', fetchError);
+  } catch {
     throw new ApiError('Ошибка при получении токена', 500);
   }
   
-  // Обрабатываем ответ (handleResponse сам проверит статус и выбросит ошибку если нужно)
-  const tokenData = await handleResponse<any>(tokenResponse, false);
-  console.log('Ответ от API token:', tokenData);
+  const tokenData = await handleResponse<Record<string, unknown>>(tokenResponse, false);
   
-  // Извлекаем токен из ответа
-  const accessToken = tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '';
-  const refreshToken = tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '';
+  const accessToken = (tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '') as string;
+  const refreshToken = (tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '') as string;
   
   if (!accessToken) {
-    console.error('Токен не найден в ответе /user/token/. Полный ответ:', JSON.stringify(tokenData, null, 2));
     throw new ApiError('Не удалось получить токен авторизации', 500);
   }
   
-  // Нормализуем ответ, объединяя данные пользователя из login и токен из token
   const normalizedResponse: AuthResponse = {
     access: accessToken,
     refresh: refreshToken,
-    username: loginData.username || loginData.user?.username || credentials.email.split('@')[0],
-    email: loginData.email || loginData.user?.email || credentials.email,
+    username: (loginData.username || (loginData.user as Record<string, unknown>)?.username || credentials.email.split('@')[0]) as string,
+    email: (loginData.email || (loginData.user as Record<string, unknown>)?.email || credentials.email) as string,
   };
-  
-  console.log('Нормализованный ответ:', normalizedResponse);
   
   return normalizedResponse;
 }
 
 export async function signup(userData: SignupRequest): Promise<AuthResponse> {
-  // Шаг 1: Выполняем регистрацию через /user/signup/
   let signupResponse: Response;
   let useCredentials = true;
   
@@ -171,12 +151,10 @@ export async function signup(userData: SignupRequest): Promise<AuthResponse> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(userData),
-      credentials: 'include', // Для установки cookies
+      credentials: 'include',
     });
   } catch (fetchError) {
-    // Если CORS ошибка, пробуем без credentials
     if (fetchError instanceof TypeError || (fetchError as Error)?.message?.includes('Failed to fetch')) {
-      console.warn('CORS ошибка с credentials при регистрации, пробуем без credentials');
       useCredentials = false;
       signupResponse = await fetch(`${API_BASE_URL}/user/signup/`, {
         method: 'POST',
@@ -190,13 +168,8 @@ export async function signup(userData: SignupRequest): Promise<AuthResponse> {
     }
   }
   
-  // clearAuthOn401 = false, так как при регистрации 401 означает ошибку регистрации, а не истекшую сессию
-  const signupData = await handleResponse<any>(signupResponse, false);
+  const signupData = await handleResponse<Record<string, unknown>>(signupResponse, false);
   
-  console.log('Ответ от API signup:', signupData);
-  
-  // Шаг 2: После регистрации нужно сначала войти через /user/login/
-  // Это необходимо для установки сессии перед получением токена
   let loginResponse: Response;
   try {
     loginResponse = await fetch(`${API_BASE_URL}/user/login/`, {
@@ -210,15 +183,12 @@ export async function signup(userData: SignupRequest): Promise<AuthResponse> {
       }),
       ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
     });
-  } catch (fetchError) {
-    console.error('Ошибка при входе после регистрации:', fetchError);
+  } catch {
     throw new ApiError('Ошибка при входе после регистрации', 500);
   }
   
-  const loginData = await handleResponse<any>(loginResponse, false);
-  console.log('Ответ от API login после регистрации:', loginData);
+  const loginData = await handleResponse<Record<string, unknown>>(loginResponse, false);
   
-  // Шаг 3: Получаем токен через /user/token/ (передаем email и password)
   let tokenResponse: Response;
   try {
     tokenResponse = await fetch(`${API_BASE_URL}/user/token/`, {
@@ -232,33 +202,25 @@ export async function signup(userData: SignupRequest): Promise<AuthResponse> {
       }),
       ...(useCredentials ? { credentials: 'include' as RequestCredentials } : {}),
     });
-  } catch (fetchError) {
-    console.error('Ошибка при запросе токена:', fetchError);
+  } catch {
     throw new ApiError('Ошибка при получении токена', 500);
   }
   
-  // Обрабатываем ответ (handleResponse сам проверит статус и выбросит ошибку если нужно)
-  const tokenData = await handleResponse<any>(tokenResponse, false);
-  console.log('Ответ от API token:', tokenData);
+  const tokenData = await handleResponse<Record<string, unknown>>(tokenResponse, false);
   
-  // Извлекаем токен из ответа
-  const accessToken = tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '';
-  const refreshToken = tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '';
+  const accessToken = (tokenData.access || tokenData.token || tokenData.access_token || tokenData.accessToken || '') as string;
+  const refreshToken = (tokenData.refresh || tokenData.refresh_token || tokenData.refreshToken || '') as string;
   
   if (!accessToken) {
-    console.error('Токен не найден в ответе /user/token/. Полный ответ:', JSON.stringify(tokenData, null, 2));
     throw new ApiError('Не удалось получить токен авторизации', 500);
   }
   
-  // Нормализуем ответ, объединяя данные пользователя из signup/login и токен из token
   const normalizedResponse: AuthResponse = {
     access: accessToken,
     refresh: refreshToken,
-    username: signupData.username || loginData.username || signupData.user?.username || loginData.user?.username || userData.username,
-    email: signupData.email || loginData.email || signupData.user?.email || loginData.user?.email || userData.email,
+    username: (signupData.username || loginData.username || (signupData.user as Record<string, unknown>)?.username || (loginData.user as Record<string, unknown>)?.username || userData.username) as string,
+    email: (signupData.email || loginData.email || (signupData.user as Record<string, unknown>)?.email || (loginData.user as Record<string, unknown>)?.email || userData.email) as string,
   };
-  
-  console.log('Нормализованный ответ:', normalizedResponse);
   
   return normalizedResponse;
 }
@@ -268,22 +230,17 @@ export async function getTracks(token?: string | null): Promise<Track[]> {
     'Content-Type': 'application/json',
   };
   
-  // Если токен есть и это не маркер отсутствия токена, добавляем Authorization header
   if (token && token !== 'NO_TOKEN' && token !== 'SESSION_AUTH') {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  // Если токен = NO_TOKEN, не добавляем Authorization header
-  // Браузер автоматически отправит cookies, если они есть
   
   const response = await fetch(`${API_BASE_URL}/catalog/track/all/`, {
     method: 'GET',
     headers,
-    // Не используем credentials из-за CORS проблем
   });
   
-  const data = await handleResponse<any>(response);
+  const data = await handleResponse<Track[] | { results?: Track[]; items?: Track[]; data?: Track[]; tracks?: Track[] }>(response);
   
-  // API может возвращать массив напрямую или объект с полем results/items/data
   if (Array.isArray(data)) {
     return data;
   } else if (data && typeof data === 'object') {
@@ -295,14 +252,9 @@ export async function getTracks(token?: string | null): Promise<Track[]> {
       return data.data;
     } else if (Array.isArray(data.tracks)) {
       return data.tracks;
-    } else {
-      console.warn('Неожиданный формат ответа API:', data);
-      return [];
     }
-  } else {
-    console.warn('Неожиданный формат ответа API:', data);
-    return [];
   }
+  return [];
 }
 
 export async function getPlaylistTracks(
@@ -313,19 +265,15 @@ export async function getPlaylistTracks(
     'Content-Type': 'application/json',
   };
   
-  // Если токен есть и это не маркер отсутствия токена, добавляем Authorization header
   if (token && token !== 'NO_TOKEN' && token !== 'SESSION_AUTH') {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  // Если токен = NO_TOKEN, не добавляем Authorization header
-  // Браузер автоматически отправит cookies, если они есть
   
   const response = await fetch(
     `${API_BASE_URL}/catalog/selection/${playlistId}/track/`,
     {
       method: 'GET',
       headers,
-      // Не используем credentials из-за CORS проблем
     }
   );
   
@@ -340,7 +288,6 @@ export async function likeTrack(
     'Content-Type': 'application/json',
   };
   
-  // Если токен есть и это не маркер отсутствия токена, добавляем Authorization header
   if (token && token !== 'NO_TOKEN' && token !== 'SESSION_AUTH') {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -350,7 +297,6 @@ export async function likeTrack(
     {
       method: 'POST',
       headers,
-      // Не используем credentials из-за CORS проблем
     }
   );
   
@@ -365,7 +311,6 @@ export async function unlikeTrack(
     'Content-Type': 'application/json',
   };
   
-  // Если токен есть и это не маркер отсутствия токена, добавляем Authorization header
   if (token && token !== 'NO_TOKEN' && token !== 'SESSION_AUTH') {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -375,7 +320,6 @@ export async function unlikeTrack(
     {
       method: 'DELETE',
       headers,
-      // Не используем credentials из-за CORS проблем
     }
   );
   
@@ -385,7 +329,6 @@ export async function unlikeTrack(
 export async function getFavoriteTracks(
   token: string
 ): Promise<Track[]> {
-  // Проверяем, что токен не пустой
   if (!token || token.trim() === '') {
     throw new ApiError('Токен не предоставлен', 401);
   }
@@ -394,26 +337,20 @@ export async function getFavoriteTracks(
     'Content-Type': 'application/json',
   };
   
-  // Если токен есть и это не маркер отсутствия токена, добавляем Authorization header
   if (token && token !== 'NO_TOKEN' && token !== 'SESSION_AUTH') {
     headers['Authorization'] = `Bearer ${token.trim()}`;
   }
-  // Если токен = NO_TOKEN или SESSION_AUTH, не добавляем Authorization header
-  // Браузер автоматически отправит cookies, если они есть (как в likeTrack/unlikeTrack)
 
   const response = await fetch(
     `${API_BASE_URL}/catalog/track/favorite/all/`,
     {
       method: 'GET',
       headers,
-      // Не используем credentials из-за CORS проблем (как в likeTrack/unlikeTrack)
-      // Браузер автоматически отправит cookies для same-origin запросов
     }
   );
   
-  const data = await handleResponse<any>(response);
+  const data = await handleResponse<Track[] | { results?: Track[]; items?: Track[]; data?: Track[]; tracks?: Track[] }>(response);
   
-  // API может возвращать массив напрямую или объект с полем results/items/data
   if (Array.isArray(data)) {
     return data;
   } else if (data && typeof data === 'object') {
@@ -425,15 +362,9 @@ export async function getFavoriteTracks(
       return data.data;
     } else if (Array.isArray(data.tracks)) {
       return data.tracks;
-    } else {
-      console.warn('Неожиданный формат ответа API:', data);
-      return [];
     }
-  } else {
-    console.warn('Неожиданный формат ответа API:', data);
-    return [];
   }
+  return [];
 }
 
 export { ApiError };
-

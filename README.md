@@ -21,9 +21,4 @@
 - **CSS Modules** для стилизации
 - **Jest + React Testing Library** для тестирования
 
-## Тестирование
-
-
-
-
 

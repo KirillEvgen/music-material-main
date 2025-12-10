@@ -47,10 +47,6 @@ export default function Player() {
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!duration || duration === 0 || isNaN(duration)) {
-      console.log(
-        'Нет корректной длительности трека, не можем перематывать. Duration:',
-        duration,
-      );
       return;
     }
 

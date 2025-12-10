@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Track } from '../src/types/Track';
 import MainLayout from '../src/components/MainLayout';
-import { getTracks, ApiError } from '../src/api/api';
+import { getTracks } from '../src/api/api';
 import { useAppSelector } from '../src/store/hooks';
 import { data as fallbackData } from '../src/data';
 
@@ -20,21 +20,15 @@ export default function Home() {
       
       try {
         const data = await getTracks(token);
-        console.log('Загружено треков:', data.length);
         
-        // Если API вернул пустой массив, используем fallback данные
         if (data.length === 0) {
-          console.log('API вернул пустой массив, используем fallback данные');
           setTracks(fallbackData);
         } else {
           setTracks(data);
         }
-      } catch (err) {
-        console.error('Ошибка загрузки треков:', err);
-        // При ошибке используем fallback данные
-        console.log('Используем fallback данные из-за ошибки API');
+      } catch {
         setTracks(fallbackData);
-        setError(null); // Не показываем ошибку, так как используем fallback
+        setError(null);
       } finally {
         setIsLoading(false);
       }
