@@ -9,6 +9,8 @@ import Sidebar from './Sidebar';
 import Player from './Player';
 import MusicInitializer from './MusicInitializer';
 import { Track } from '../types/Track';
+import { useAppSelector } from '../store/hooks';
+import { applyFilters, hasActiveFilters } from '../utils/filterUtils';
 import styles from './MainLayout.module.css';
 
 interface MainLayoutProps {
@@ -29,6 +31,9 @@ export default function MainLayout({
   onTracksChange,
 }: MainLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Получаем состояние фильтров из Redux
+  const filters = useAppSelector((state) => state.music.filters);
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
@@ -36,6 +41,21 @@ export default function MainLayout({
 
   // Убеждаемся, что tracks - это массив
   const safeTracks = useMemo(() => Array.isArray(tracks) ? tracks : [], [tracks]);
+
+  // Применяем фильтры к трекам
+  const filteredTracks = useMemo(
+    () => applyFilters(safeTracks, filters),
+    [safeTracks, filters]
+  );
+
+  // Проверяем, есть ли активные фильтры
+  const filtersActive = useMemo(
+    () => hasActiveFilters(filters),
+    [filters]
+  );
+
+  // Определяем, нужно ли показывать сообщение "Нет подходящих треков"
+  const showNoResults = filtersActive && filteredTracks.length === 0 && safeTracks.length > 0;
 
   const handleTrackUpdate = useCallback((updatedTrack: Track) => {
     if (!onTracksChange) return;
@@ -69,7 +89,21 @@ export default function MainLayout({
               ) : (
                 <>
                   <Filter tracks={safeTracks} />
-                  <TrackList tracks={safeTracks} onTrackUpdate={handleTrackUpdate} />
+                  {showNoResults ? (
+                    <div 
+                      style={{ 
+                        padding: '40px 20px', 
+                        textAlign: 'center', 
+                        color: '#888',
+                        fontSize: '18px' 
+                      }}
+                      data-testid="no-results-message"
+                    >
+                      Нет подходящих треков
+                    </div>
+                  ) : (
+                    <TrackList tracks={filteredTracks} onTrackUpdate={handleTrackUpdate} />
+                  )}
                 </>
               )}
               {children}
@@ -83,4 +117,3 @@ export default function MainLayout({
     </>
   );
 }
-
